@@ -1,5 +1,6 @@
 "use strict";
 
+// 定义算法
 const normalize = (v) => {
   const len = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
   return [v[0] / len, v[1] / len, v[2] / len];
@@ -21,17 +22,32 @@ const rotateVertices = (vertices, angle, axis) => {
 
   // 旋转矩阵（Rodrigues' 旋转公式）
   let rotationMatrix = [
-    cosA + (1 - cosA) * x * x, (1 - cosA) * x * y - sinA * z, (1 - cosA) * x * z + sinA * y,
-    (1 - cosA) * y * x + sinA * z, cosA + (1 - cosA) * y * y, (1 - cosA) * y * z - sinA * x,
-    (1 - cosA) * z * x - sinA * y, (1 - cosA) * z * y + sinA * x, cosA + (1 - cosA) * z * z
+    cosA + (1 - cosA) * x * x,
+    (1 - cosA) * x * y - sinA * z,
+    (1 - cosA) * x * z + sinA * y,
+    (1 - cosA) * y * x + sinA * z,
+    cosA + (1 - cosA) * y * y,
+    (1 - cosA) * y * z - sinA * x,
+    (1 - cosA) * z * x - sinA * y,
+    (1 - cosA) * z * y + sinA * x,
+    cosA + (1 - cosA) * z * z,
   ];
 
   for (let i = 0; i < vertices.length; i += 9) {
     let v = [vertices[i], vertices[i + 1], vertices[i + 2]]; // 取出顶点坐标 (x, y, z)
-    
-    let xNew = rotationMatrix[0] * v[0] + rotationMatrix[1] * v[1] + rotationMatrix[2] * v[2];
-    let yNew = rotationMatrix[3] * v[0] + rotationMatrix[4] * v[1] + rotationMatrix[5] * v[2];
-    let zNew = rotationMatrix[6] * v[0] + rotationMatrix[7] * v[1] + rotationMatrix[8] * v[2];
+
+    let xNew =
+      rotationMatrix[0] * v[0] +
+      rotationMatrix[1] * v[1] +
+      rotationMatrix[2] * v[2];
+    let yNew =
+      rotationMatrix[3] * v[0] +
+      rotationMatrix[4] * v[1] +
+      rotationMatrix[5] * v[2];
+    let zNew =
+      rotationMatrix[6] * v[0] +
+      rotationMatrix[7] * v[1] +
+      rotationMatrix[8] * v[2];
 
     rotated.push(xNew, yNew, zNew, ...vertices.slice(i + 3, i + 9)); // 复制法线、颜色等信息
   }
@@ -39,12 +55,71 @@ const rotateVertices = (vertices, angle, axis) => {
   return rotated;
 };
 
+// 平移矩阵
+// prettier-ignore
+const createTranslationMatrix = (x, y, z) => {
+  return new Float32Array([
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    x, y, z, 1
+  ])
+}
+
+// 旋转矩阵
+// prettier-ignore
+const createRotationMatrix = (xAngle, yAngle, zAngle) => {
+  const cosX = Math.cos(xAngle), sinX = Math.sin(xAngle);
+  const cosY = Math.cos(yAngle), sinY = Math.sin(yAngle);
+  const cosZ = Math.cos(zAngle), sinZ = Math.sin(zAngle);
+
+  // 绕 X 轴旋转矩阵
+  const rotX = [
+      1, 0,    0,    0,
+      0, cosX, -sinX, 0,
+      0, sinX, cosX, 0,
+      0, 0,    0,    1
+  ];
+
+  // 绕 Y 轴旋转矩阵
+  const rotY = [
+      cosY, 0, sinY, 0,
+      0,    1, 0,    0,
+      -sinY, 0, cosY, 0,
+      0,    0, 0,    1
+  ];
+
+  // 绕 Z 轴旋转矩阵
+  const rotZ = [
+      cosZ, -sinZ, 0, 0,
+      sinZ, cosZ,  0, 0,
+      0,    0,     1, 0,
+      0,    0,     0, 1
+  ];
+
+  // 旋转矩阵 = Rz * Ry * Rx
+  return multiplyMatrices(multiplyMatrices(rotZ, rotY), rotX);
+};
+
+// 旋转平移合并
+// prettier-ignore
+const multiplyMatrices = (a, b) => {
+  let result = new Float32Array(16);
+  for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+          result[i * 4 + j] =
+              a[i * 4 + 0] * b[0 * 4 + j] +
+              a[i * 4 + 1] * b[1 * 4 + j] +
+              a[i * 4 + 2] * b[2 * 4 + j] +
+              a[i * 4 + 3] * b[3 * 4 + j];
+      }
+  }
+  return result;
+};
+
+// 定义图形
 // prettier-ignore
 const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
-  // // init
-  // let radius = 0.1,
-  //   height = 6.0,
-  //   segment = 24;
 
   const angleStep = (Math.PI * 2) / segment;
   const angleStep2 = Math.PI / 2 / (segment / 2);
@@ -71,8 +146,8 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
     let phi1 = i * angleStep2,
       phi2 = (i + 1) * angleStep2;
 
-    let z1 = -radius * Math.cos(phi1) - height / 2,
-      z2 = -radius * Math.cos(phi2) - height / 2;
+    let y1 = -radius * Math.cos(phi1) - height / 2,
+      y2 = -radius * Math.cos(phi2) - height / 2;
 
     let r1 = radius * Math.sin(phi1),
       r2 = radius * Math.sin(phi2);
@@ -80,20 +155,20 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
     for (let j = 0; j <= segment; j++) {
       let theta = j * angleStep,
         x1 = r1 * Math.cos(theta),
-        y1 = r1 * Math.sin(theta),
+        z1 = r1 * Math.sin(theta),
         x2 = r2 * Math.cos(theta),
-        y2 = r2 * Math.sin(theta);
+        z2 = r2 * Math.sin(theta);
 
       let n1 = normalize([x1, y1, z1]),
         n2 = normalize([x2, y2, z2]);
 
       vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
       vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), r1 * Math.sin(theta + angleStep), z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
 
       vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), r1 * Math.sin(theta + angleStep), z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
-      vertices.push(r2 * Math.cos(theta + angleStep), r2 * Math.sin(theta + angleStep), z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
+      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
     }
   }
 
@@ -116,8 +191,8 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
     let phi1 = Math.PI + i * angleStep2,
       phi2 = Math.PI + (i + 1) * angleStep2;
 
-    let z1 = -radius * Math.cos(phi1) + height / 2,
-      z2 = -radius * Math.cos(phi2) + height / 2;
+    let y1 = -radius * Math.cos(phi1) + height / 2,
+      y2 = -radius * Math.cos(phi2) + height / 2;
 
     let r1 = radius * Math.sin(phi1),
       r2 = radius * Math.sin(phi2);
@@ -125,50 +200,20 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
     for (let j = 0; j <= segment; j++) {
       let theta = j * angleStep,
         x1 = r1 * Math.cos(theta),
-        y1 = r1 * Math.sin(theta),
+        z1 = r1 * Math.sin(theta),
         x2 = r2 * Math.cos(theta),
-        y2 = r2 * Math.sin(theta);
+        z2 = r2 * Math.sin(theta);
 
       let n1 = normalize([x1, y1, z1]),
         n2 = normalize([x2, y2, z2]);
 
       vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.5, 0.5);
       vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0);
-      vertices.push(
-        r1 * Math.cos(theta + angleStep),
-        r1 * Math.sin(theta + angleStep),
-        z1,
-        n1[0],
-        n1[1],
-        n1[2],
-        1.0,
-        0.5,
-        0.5
-      );
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5);
 
       vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0);
-      vertices.push(
-        r1 * Math.cos(theta + angleStep),
-        r1 * Math.sin(theta + angleStep),
-        z1,
-        n1[0],
-        n1[1],
-        n1[2],
-        1.0,
-        0.5,
-        0.5
-      );
-      vertices.push(
-        r2 * Math.cos(theta + angleStep),
-        r2 * Math.sin(theta + angleStep),
-        z2,
-        n2[0],
-        n2[1],
-        n2[2],
-        0.5,
-        0.5,
-        1.0
-      );
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5);
+      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.5, 0.5, 1.0);
     }
   }
 
@@ -177,25 +222,25 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
     let angle1 = i * angleStep,
       angle2 = (i + 1) * angleStep,
       x1 = radius * Math.cos(angle1),
-      y1 = radius * Math.sin(angle1),
+      z1 = radius * Math.sin(angle1),
       x2 = radius * Math.cos(angle2),
-      y2 = radius * Math.sin(angle2);
+      z2 = radius * Math.sin(angle2);
 
     // Calculate normal line
     let nx1 = x1,
-      ny1 = y1,
+      nz1 = z1,
       nx2 = x2,
-      ny2 = y2;
+      nz2 = z2;
 
     // Logic-3-1: Triangle1 (A, B, C)
-    vertices.push(x1, y1, -height / 2, nx1, ny1, 0, 1.0, 0.0, 1.0);
-    vertices.push(x1, y1, height / 2, nx1, ny1, 0, 0.0, 0.0, 1.0);
-    vertices.push(x2, y2, height / 2, nx2, ny2, 0, 1.0, 1.0, 0.0);
+    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0);
+    vertices.push(x1, height / 2, z1, nx1, 0, nz1, 0.0, 0.0, 1.0);
+    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0);
 
     // Logic-3-2: Triangle2 (A, C, D)
-    vertices.push(x1, y1, -height / 2, nx1, ny1, 0, 1.0, 0.0, 1.0);
-    vertices.push(x2, y2, height / 2, nx2, ny2, 0, 1.0, 1.0, 0.0);
-    vertices.push(x2, y2, -height / 2, nx2, ny2, 0, 0.0, 1.0, 0.0);
+    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0);
+    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0);
+    vertices.push(x2, -height / 2, z2, nx2, 0, nz2, 0.0, 1.0, 0.0);
   }
 
   return vertices;
@@ -277,18 +322,35 @@ const X = () => {
   let cylinderVertices = cylinder(undefined, 2.0, undefined);
   console.log("Original Cylinder Vertex Count:", cylinderVertices.length / 9); // 调试信息
 
-  let rotatedVertices1 = rotateVertices(cylinderVertices, Math.PI / 4, [1, 0, 0]); // 旋转 45°
-  let rotatedVertices2 = rotateVertices(cylinderVertices, -Math.PI / 4, [1, 0, 0]); // 旋转 -45°
+  let rotatedVertices1 = rotateVertices(
+    cylinderVertices,
+    Math.PI / 4,
+    [0, 0, 1]
+  ); // 旋转 45°
+  let rotatedVertices2 = rotateVertices(
+    cylinderVertices,
+    -Math.PI / 4,
+    [0, 0, 1]
+  ); // 旋转 -45°
 
-  console.log("Rotated Cylinder Vertex Count:", rotatedVertices1.length / 9, rotatedVertices2.length / 9); // 调试信息
+  console.log(
+    "Rotated Cylinder Vertex Count:",
+    rotatedVertices1.length / 9,
+    rotatedVertices2.length / 9
+  ); // 调试信息
   return [...rotatedVertices1, ...rotatedVertices2]; // 合并两个旋转后的 cylinder
 };
 
+// 定义shader
 const shaderCode = `
 struct DataStruct {
     @builtin(position) pos: vec4f,
     @location(0) normal: vec3f,
     @location(1) colors: vec3f,
+}
+
+struct InstanceData {
+    modelMatrix: mat4x4<f32>
 }
 
 struct Uniforms {
@@ -300,33 +362,39 @@ struct Uniforms {
 }
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(1) @binding(0) var<storage, read> instances: array<InstanceData>;
 
 @vertex
 fn vertexMain(
     @location(0) coords: vec3f, 
     @location(1) normal: vec3f, 
-    @location(2) colors: vec3f
+    @location(2) colors: vec3f,
+    @builtin(instance_index) instanceIndex: u32 // GPU自动管理实例索引
 ) -> DataStruct {
     var outData: DataStruct;
 
-    let cosX = cos(uniforms.rotationX);
-    let sinX = sin(uniforms.rotationX);
-    let cosY = cos(uniforms.rotationY);
-    let sinY = sin(uniforms.rotationY);
+    // let cosX = cos(uniforms.rotationX);
+    // let sinX = sin(uniforms.rotationX);
+    // let cosY = cos(uniforms.rotationY);
+    // let sinY = sin(uniforms.rotationY);
 
-    let rotatedX = vec3f(
-        coords.x,
-        coords.y * cosX - coords.z * sinX,
-        coords.y * sinX + coords.z * cosX
-    );
+    // let rotatedX = vec3f(
+    //     coords.x,
+    //     coords.y * cosX - coords.z * sinX,
+    //     coords.y * sinX + coords.z * cosX
+    // );
 
-    let rotatedY = vec3f(
-        rotatedX.x * cosY - rotatedX.z * sinY,
-        rotatedX.y,
-        rotatedX.x * sinY + rotatedX.z * cosY
-    );
+    // let rotatedY = vec3f(
+    //     rotatedX.x * cosY - rotatedX.z * sinY,
+    //     rotatedX.y,
+    //     rotatedX.x * sinY + rotatedX.z * cosY
+    // );
 
-    outData.pos = uniforms.projectionMatrix * uniforms.viewMatrix * vec4f(rotatedY, 1.0); // 4D
+    // 读取实例变换矩阵
+    let modelMatrix = instances[instanceIndex].modelMatrix;
+    let worldPosition = modelMatrix * vec4f(coords, 1.0);
+
+    outData.pos = uniforms.projectionMatrix * uniforms.viewMatrix * worldPosition; // 4D
     outData.normal = normal; //  transmission normal
     outData.colors = colors;
     return outData;
@@ -341,6 +409,7 @@ fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
 }
 `;
 
+// 定义图形计算
 async function runExample() {
   if (!navigator.gpu) {
     throw new Error("WebGPU not supported");
@@ -361,6 +430,7 @@ async function runExample() {
   if (!context) {
     throw new Error("Could not obtain WebGPU context for canvas");
   }
+  // 初始化图形画布
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
     device: device,
@@ -368,27 +438,189 @@ async function runExample() {
     alphaMode: "premultiplied",
   });
 
-  const vertexData = new Float32Array([...cylinder(), ...torus(), ...X()]);
-  console.log("Total Vertex Count:", vertexData.length / 9); // 检查是否包含 X 形状
-
+  // 定义顶点
+  const vertexData_lineSegment = new Float32Array([...cylinder()]);
+  const vertexData_torus = new Float32Array([...torus()]);
+  const vertexData_X = new Float32Array([...X()]);
+  console.log(
+    "VertexData_lineSegment Count:",
+    vertexData_lineSegment.length / 9
+  );
+  console.log("VertexData_torus Count:", vertexData_torus.length / 9);
+  console.log("VertexData_X Count:", vertexData_X.length / 9);
   //   console.log(vertexData);
-  const vertexBuffer = device.createBuffer({
-    label: "Cylinder vertex buffer",
-    size: vertexData.byteLength,
+
+  // 定义顶点缓冲区
+  const vertexBuffer_lineSegment = device.createBuffer({
+    label: "lineSegment vertex buffer",
+    size: vertexData_lineSegment.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
-  device.queue.writeBuffer(vertexBuffer, 0, vertexData);
+
+  const vertexBuffer_torus = device.createBuffer({
+    label: "torus vertex buffer",
+    size: vertexData_torus.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+
+  const vertexBuffer_X = device.createBuffer({
+    label: "X vertex buffer",
+    size: vertexData_X.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+
+  // 写入顶点缓冲区
+  device.queue.writeBuffer(vertexBuffer_lineSegment, 0, vertexData_lineSegment);
+  device.queue.writeBuffer(vertexBuffer_torus, 0, vertexData_torus);
+  device.queue.writeBuffer(vertexBuffer_X, 0, vertexData_X);
+
+  // 创建实例数据
+  const instanceTransforms = new Float32Array([
+    ...createTranslationMatrix(1, 0, 0), // 右移1单位
+    ...createTranslationMatrix(-1, 0, 0), // 左移1单位
+    ...multiplyMatrices(createTranslationMatrix(1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 上移1单位，绕Z轴旋转90°
+    ...multiplyMatrices(createTranslationMatrix(-1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 下移1单位，绕Z轴旋转-90°
+  ]);
+
+  const instanceCount = instanceTransforms.length / 16;
+
+  // 创建实例缓冲区
+  const instanceBuffer = device.createBuffer({
+    label: "Instance Transform Buffer",
+    size: instanceTransforms.byteLength,
+    // usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  device.queue.writeBuffer(instanceBuffer, 0, instanceTransforms);
+
+  // 定义顶点缓冲区布局
+  const vertexBufferLayout = [
+    {
+      arrayStride: 36, // 9 * 4 = 36 bytes per vertex
+      attributes: [
+        { format: "float32x3", offset: 0, shaderLocation: 0 }, // 顶点坐标
+        { format: "float32x3", offset: 12, shaderLocation: 1 }, // 法线
+        { format: "float32x3", offset: 24, shaderLocation: 2 }, // 颜色
+      ],
+    },
+  ];
+
+  // 定义shader缓冲区
   const shaderModule = device.createShaderModule({
     label: "Example shader module",
     code: shaderCode,
   });
 
+  // 定义深度缓冲区
   const depthTexture = device.createTexture({
-    size: [canvas.clientWidth, canvas.height],
+    size: [canvas.width, canvas.height],
     format: "depth24plus",
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
+  // 定义统一缓冲区<-参数
+  // const uniformBuffer = device.createBuffer({
+  //   size: 8, // rotationX(4) + rotationY(4)
+  //   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  // });
+  // const uniformBuffer = device.createBuffer({
+  //   size: 80, // 64 (matrix) + 8 (rotations) + 8 (padding)
+  //   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  // })
+  const uniformBuffer = device.createBuffer({
+    size: 64 + 64 + 8 + 8, // Perspective Matrix + View Matrix + Rotation + Padding
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  // 绑定组布局<-统一缓冲区<-参数
+  const bindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0, // **Uniform Buffer**
+        visibility: GPUShaderStage.VERTEX,
+        buffer: {
+          type: "uniform",
+        },
+      },
+    ],
+  });
+
+  const bindGroupLayoutInstance = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0, // **实例缓冲区**
+        visibility: GPUShaderStage.VERTEX,
+        buffer: {
+          type: "read-only-storage"
+        }
+      }
+    ]
+  })
+
+  // 绑定组<-组布局<-统一缓冲区<-参数
+  const bindGroup = device.createBindGroup({
+    layout: bindGroupLayout,
+    entries: [
+      {
+        binding: 0, // **Uniform Buffer**
+        resource: {
+          buffer: uniformBuffer, 
+        },
+      },
+    ],
+  });
+
+  const bindGroupInstance = device.createBindGroup({
+    layout: bindGroupLayoutInstance,
+    entries: [
+      {
+        binding: 0,
+        resource: { buffer: instanceBuffer }
+      }
+    ]
+  })
+
+  // 定义管线布局<-组布局<-统一缓冲区<-参数
+  const pipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [bindGroupLayout, bindGroupLayoutInstance], // Explicit binding of laybout
+  });
+
+  // 定义渲染管线<-管线布局<-组布局<-统一缓冲区<-参数
+  const renderPipeline = device.createRenderPipeline({
+    layout: pipelineLayout, // not "auto"
+    vertex: {
+      module: shaderModule,
+      entryPoint: "vertexMain",
+      // buffers: [
+      //   {
+      //     arrayStride: 36, // 9 * 4 = 36 bytes per vertex
+      //     attributes: [
+      //       { format: "float32x3", offset: 0, shaderLocation: 0 }, // (x, y, z)
+      //       { format: "float32x3", offset: 12, shaderLocation: 1 }, // (nx, ny, nz)
+      //       { format: "float32x3", offset: 24, shaderLocation: 2 }, // (r, g, b)
+      //     ],
+      //   },
+      // ],
+      buffers: vertexBufferLayout,
+    },
+    fragment: {
+      module: shaderModule,
+      entryPoint: "fragmentMain",
+      targets: [
+        {
+          format: canvasFormat,
+        },
+      ],
+    },
+    depthStencil: {
+      format: "depth24plus",
+      depthWriteEnabled: true,
+      depthCompare: "less",
+    },
+  });
+
+  // 渲染
   const render = () => {
     const encoder = device.createCommandEncoder();
     if (!encoder) {
@@ -413,110 +645,101 @@ async function runExample() {
     });
 
     renderPass.setPipeline(renderPipeline);
-    renderPass.setBindGroup(0, bindGroup);
-    renderPass.setVertexBuffer(0, vertexBuffer);
-    renderPass.draw(vertexData.length / 9);
+    renderPass.setBindGroup(0, bindGroup); // **绑定 uniformBuffer**
+    renderPass.setBindGroup(1, bindGroupInstance); // **绑定 instanceBuffer**
+
+    // 渲染lineSegment
+    renderPass.setVertexBuffer(0, vertexBuffer_lineSegment);
+    // renderPass.setVertexBuffer(1, instanceBuffer); // **绑定 Instance Buffer**
+    renderPass.draw(vertexData_lineSegment.length / 9, instanceCount); // **多实例渲染**
+
+    // 渲染torus
+    renderPass.setVertexBuffer(0, vertexBuffer_torus);
+    renderPass.draw(vertexData_torus.length / 9);
+
+    // 渲染X
+    renderPass.setVertexBuffer(0, vertexBuffer_X);
+    renderPass.draw(vertexData_X.length / 9);
+
     renderPass.end();
     device.queue.submit([encoder.finish()]);
   };
 
-  const createViewMatrix = (eye, center, up) => {
-    const f = normalize([
+  // 定义视角矩阵
+  // const createViewMatrix = (eye, center, up) => {
+  //   const f = normalize([
+  //     center[0] - eye[0],
+  //     center[1] - eye[1],
+  //     center[2] - eye[2],
+  //   ]);
+  //   const s = normalize(cross(f, up));
+  //   const u = cross(s, f);
+
+  //   // prettier-ignore
+  //   return [
+  //     s[0], u[0], -f[0], 0,
+  //     s[1], u[1], -f[1], 0,
+  //     s[2], u[2], -f[2], 0,
+  //     -dot(s, eye), -dot(u, eye), dot(f, eye), 1
+  //   ]
+  // };
+
+  const createViewMatrix = (eye, center, up, rotationX = 0, rotationY = 0) => {
+    // 计算前向量
+    let forward = normalize([
       center[0] - eye[0],
       center[1] - eye[1],
       center[2] - eye[2],
     ]);
-    const s = normalize(cross(f, up));
-    const u = cross(s, f);
-
-    // prettier-ignore
+    let right = normalize(cross(forward, up));
+    let newUp = cross(right, forward);
+  
+    // 旋转角度（绕 X 和 Y 轴）
+    const cosX = Math.cos(rotationX), sinX = Math.sin(rotationX);
+    const cosY = Math.cos(rotationY), sinY = Math.sin(rotationY);
+  
+    // **绕 X 轴旋转（上下旋转）**
+    let rotatedForwardX = [
+      forward[0],
+      forward[1] * cosX - forward[2] * sinX,
+      forward[1] * sinX + forward[2] * cosX
+    ];
+    let rotatedUpX = [
+      newUp[0],
+      newUp[1] * cosX - newUp[2] * sinX,
+      newUp[1] * sinX + newUp[2] * cosX
+    ];
+  
+    // **绕 Y 轴旋转（左右旋转）**
+    let rotatedForward = [
+      rotatedForwardX[0] * cosY - rotatedForwardX[2] * sinY,
+      rotatedForwardX[1],
+      rotatedForwardX[0] * sinY + rotatedForwardX[2] * cosY
+    ];
+    let rotatedRight = [
+      right[0] * cosY - right[2] * sinY,
+      right[1],
+      right[0] * sinY + right[2] * cosY
+    ];
+  
+    let rotatedUp = cross(rotatedRight, rotatedForward);
+  
+    // 计算新的 `viewMatrix`
     return [
-      s[0], u[0], -f[0], 0,
-      s[1], u[1], -f[1], 0,
-      s[2], u[2], -f[2], 0,
-      -dot(s, eye), -dot(u, eye), dot(f, eye), 1
-    ]
+      rotatedRight[0], rotatedUp[0], -rotatedForward[0], 0,
+      rotatedRight[1], rotatedUp[1], -rotatedForward[1], 0,
+      rotatedRight[2], rotatedUp[2], -rotatedForward[2], 0,
+      -dot(rotatedRight, eye), -dot(rotatedUp, eye), dot(rotatedForward, eye), 1
+    ];
   };
 
   const eye = [0, 0, 8],
-    center = [0, 0, 0],
-    up = [0, 1, 0];
+        center = [0, 0, 0],
+        up = [0, 1, 0];
 
   const viewMatrix = createViewMatrix(eye, center, up);
 
-  // const uniformBuffer = device.createBuffer({
-  //   size: 8, // rotationX(4) + rotationY(4)
-  //   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  // });
-  // const uniformBuffer = device.createBuffer({
-  //   size: 80, // 64 (matrix) + 8 (rotations) + 8 (padding)
-  //   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  // })
-  const uniformBuffer = device.createBuffer({
-    size: 64 + 64 + 8 + 8, // Perspective Matrix + View Matrix + Rotation + Padding
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const bindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX,
-        buffer: {
-          type: "uniform",
-        },
-      },
-    ],
-  });
-
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: {
-          buffer: uniformBuffer,
-        },
-      },
-    ],
-  });
-
-  const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [bindGroupLayout], // Explicit binding of laybout
-  });
-
-  const renderPipeline = device.createRenderPipeline({
-    layout: pipelineLayout, // not "auto"
-    vertex: {
-      module: shaderModule,
-      entryPoint: "vertexMain",
-      buffers: [
-        {
-          arrayStride: 36, // 9 * 4 = 36 bytes per vertex
-          attributes: [
-            { format: "float32x3", offset: 0, shaderLocation: 0 }, // (x, y, z)
-            { format: "float32x3", offset: 12, shaderLocation: 1 }, // (nx, ny, nz)
-            { format: "float32x3", offset: 24, shaderLocation: 2 }, // (r, g, b)
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: shaderModule,
-      entryPoint: "fragmentMain",
-      targets: [
-        {
-          format: canvasFormat,
-        },
-      ],
-    },
-    depthStencil: {
-      format: "depth24plus",
-      depthWriteEnabled: true,
-      depthCompare: "less",
-    },
-  });
-
+  // 定义投影矩阵
   // prettier-ignore
   const createProjectionMatrix = (fov, aspect, near, far) => {
     const f = 1.0 / Math.tan(fov / 2);
@@ -528,6 +751,7 @@ async function runExample() {
     ];
   };
 
+  // 定义投影矩阵参数
   const fov = Math.PI / 4,
     aspect = canvas.width / canvas.height,
     near = 0.1,
@@ -538,9 +762,11 @@ async function runExample() {
   let rotationX = 0.0;
   let rotationY = 0.0;
   let isDragging = false;
+  let needRender = false;
   let lastMouseX = 0;
   let lastMouseY = 0;
 
+  // 更新参数
   // const updateRotation = () => {
   //   console.log(rotationX, rotationY);
   //   const uniformData = new Float32Array([rotationX, rotationY]);
@@ -556,41 +782,63 @@ async function runExample() {
   //   device.queue.writeBuffer(uniformBuffer, 0, uniformData)
   // }
   const updateUniforms = () => {
+    const viewMatrix = createViewMatrix(eye, center, up, rotationX, rotationY);
+
     const uniformData = new Float32Array([
       ...projectionMatrix,
       ...viewMatrix,
-      rotationX,
-      rotationY,
+      0,
+      0,
       0,
       0,
     ]);
     device.queue.writeBuffer(uniformBuffer, 0, uniformData);
   };
 
-  document.addEventListener("mousedown", (event) => {
-    isDragging = true;
-    lastMouseX = event.clientX;
-    lastMouseY = event.clientY;
-  });
+  // document.addEventListener("mousedown", (event) => {
+  //   isDragging = true;
+  //   lastMouseX = event.clientX;
+  //   lastMouseY = event.clientY;
+  // });
 
-  document.addEventListener("mouseup", () => {
-    isDragging = false;
-  });
+  // document.addEventListener("mouseup", () => {
+  //   isDragging = false;
+  //   needRender = false;
+  // });
 
-  document.addEventListener("mousemove", (event) => {
-    if (isDragging) {
-      let deltaX = (event.clientX - lastMouseX) * 0.01; // 旋转比例
-      let deltaY = (event.clientY - lastMouseY) * 0.01;
+  // document.addEventListener("mousemove", (event) => {
+  //   if (isDragging) {
+  //     let deltaX = (event.clientX - lastMouseX) * 0.01; // 旋转比例
+  //     let deltaY = (event.clientY - lastMouseY) * 0.01;
 
-      rotationY += deltaX; // 左右旋转（绕 Y 轴）
-      rotationX += deltaY; // 上下旋转（绕 X 轴）
+  //     rotationY += deltaX; // 左右旋转（绕 Y 轴）
+  //     rotationX += deltaY; // 上下旋转（绕 X 轴）
 
-      lastMouseX = event.clientX;
-      lastMouseY = event.clientY;
+  //     lastMouseX = event.clientX;
+  //     lastMouseY = event.clientY;
 
-      updateUniforms(); // 更新 GPU uniform
-      render();
-    }
-  });
+  //     updateUniforms(); // 更新 GPU uniform
+  //     needRender = true;
+  //   }
+  // });
+
+  const animationLoop = () => {
+    updateUniforms();
+    render();
+    requestAnimationFrame(animationLoop);
+  };
+  // const animationLoop = () => {
+  //   if (needRender) {
+  //     render();
+  //     needRender = false;
+  //   }
+  //   requestAnimationFrame(animationLoop);
+  // };
+
+  updateUniforms();
+
+  render();
+
+  animationLoop();
 }
 runExample();
