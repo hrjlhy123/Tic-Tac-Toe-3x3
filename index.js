@@ -33,7 +33,7 @@ const rotateVertices = (vertices, angle, axis) => {
     cosA + (1 - cosA) * z * z,
   ];
 
-  for (let i = 0; i < vertices.length; i += 9) {
+  for (let i = 0; i < vertices.length; i += 10) {
     let v = [vertices[i], vertices[i + 1], vertices[i + 2]]; // 取出顶点坐标 (x, y, z)
 
     let xNew =
@@ -49,7 +49,7 @@ const rotateVertices = (vertices, angle, axis) => {
       rotationMatrix[7] * v[1] +
       rotationMatrix[8] * v[2];
 
-    rotated.push(xNew, yNew, zNew, ...vertices.slice(i + 3, i + 9)); // 复制法线、颜色等信息
+    rotated.push(xNew, yNew, zNew, ...vertices.slice(i + 3, i + 10)); // 复制法线、颜色等信息
   }
 
   return rotated;
@@ -162,13 +162,13 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
       let n1 = normalize([x1, y1, z1]),
         n2 = normalize([x2, y2, z2]);
 
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
 
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0);
-      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
+      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
     }
   }
 
@@ -207,13 +207,13 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
       let n1 = normalize([x1, y1, z1]),
         n2 = normalize([x2, y2, z2]);
 
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.5, 0.5);
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
 
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5);
-      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.5, 0.5, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
+      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
     }
   }
 
@@ -233,14 +233,14 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
       nz2 = z2;
 
     // Logic-3-1: Triangle1 (A, B, C)
-    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0);
-    vertices.push(x1, height / 2, z1, nx1, 0, nz1, 0.0, 0.0, 1.0);
-    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0);
+    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0, 1.0);
+    vertices.push(x1, height / 2, z1, nx1, 0, nz1, 0.0, 0.0, 1.0, 1.0);
+    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0, 1.0);
 
     // Logic-3-2: Triangle2 (A, C, D)
-    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0);
-    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0);
-    vertices.push(x2, -height / 2, z2, nx2, 0, nz2, 0.0, 1.0, 0.0);
+    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0, 1.0);
+    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0, 1.0);
+    vertices.push(x2, -height / 2, z2, nx2, 0, nz2, 0.0, 1.0, 0.0, 1.0);
   }
 
   return vertices;
@@ -303,24 +303,24 @@ const torus = (R = 0.6, r = 0.1, segmentMain = 24, segmentTube = 24) => {
       ]);
 
       // 添加两个三角形 (四个点形成一个四边形)
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0);
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0);
-      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0, 1.0);
 
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0);
-      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0);
-      vertices.push(x4, y4, z4, n4[0], n4[1], n4[2], 0.0, 1.0, 0.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
+      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0, 1.0);
+      vertices.push(x4, y4, z4, n4[0], n4[1], n4[2], 0.0, 1.0, 0.0, 1.0);
     }
   }
 
-  console.log("Torus Vertex Count:", vertices.length / 9); // 调试信息
+  console.log("Torus Vertex Count:", vertices.length / 10); // 调试信息
   return vertices;
 };
 
 const X = () => {
   let segment = 24;
   let cylinderVertices = cylinder(undefined, 1.6, undefined);
-  console.log("Original Cylinder Vertex Count:", cylinderVertices.length / 9); // 调试信息
+  console.log("Original Cylinder Vertex Count:", cylinderVertices.length / 10); // 调试信息
 
   let rotatedVertices1 = rotateVertices(
     cylinderVertices,
@@ -335,8 +335,8 @@ const X = () => {
 
   console.log(
     "Rotated Cylinder Vertex Count:",
-    rotatedVertices1.length / 9,
-    rotatedVertices2.length / 9
+    rotatedVertices1.length / 10,
+    rotatedVertices2.length / 10
   ); // 调试信息
   return [...rotatedVertices1, ...rotatedVertices2]; // 合并两个旋转后的 cylinder
 };
@@ -346,7 +346,7 @@ const shaderCode = `
 struct DataStruct {
     @builtin(position) pos: vec4f,
     @location(0) normal: vec3f,
-    @location(1) colors: vec3f,
+    @location(1) colors: vec4f,
 }
 
 struct InstanceData {
@@ -368,7 +368,7 @@ struct Uniforms {
 fn vertexMain(
     @location(0) coords: vec3f, 
     @location(1) normal: vec3f, 
-    @location(2) colors: vec3f,
+    @location(2) colors: vec4f,
     @builtin(instance_index) instanceIndex: u32 // GPU自动管理实例索引
 ) -> DataStruct {
     var outData: DataStruct;
@@ -405,7 +405,7 @@ fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
     // let lightDirection = normalize(vec3f(1.0, 1.0, 1.0)); // oblique overhead light source
     // let diffuse = max(dot(fragData.normal, lightDirection), 0.0);
     // return vec4f(fragData.colors * diffuse, 1.0);
-    return vec4f(fragData.colors, 1.0);
+    return fragData.colors;
 }
 `;
 
@@ -444,10 +444,10 @@ async function runExample() {
   const vertexData_X = new Float32Array([...X()]);
   console.log(
     "VertexData_lineSegment Count:",
-    vertexData_lineSegment.length / 9
+    vertexData_lineSegment.length / 10
   );
-  console.log("VertexData_torus Count:", vertexData_torus.length / 9);
-  console.log("VertexData_X Count:", vertexData_X.length / 9);
+  console.log("VertexData_torus Count:", vertexData_torus.length / 10);
+  console.log("VertexData_X Count:", vertexData_X.length / 10);
   //   console.log(vertexData);
 
   // 定义顶点缓冲区
@@ -469,6 +469,14 @@ async function runExample() {
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
   });
 
+  // for (let i = 0; i < vertexData_X.length; i += 10) {
+  //   console.log(
+  //     `Vertex ${i / 10}: Color = (${vertexData_X[i + 6]}, ${
+  //       vertexData_X[i + 7]
+  //     }, ${vertexData_X[i + 8]}, ${vertexData_X[i + 9]})`
+  //   );
+  // }
+
   // 写入顶点缓冲区
   device.queue.writeBuffer(vertexBuffer_lineSegment, 0, vertexData_lineSegment);
   device.queue.writeBuffer(vertexBuffer_torus, 0, vertexData_torus);
@@ -483,7 +491,7 @@ async function runExample() {
   //   ...multiplyMatrices(createTranslationMatrix(-1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 下移1单位，绕Z轴旋转-90°
   // ]);
 
-  const instanceTransforms = [
+  let instanceTransforms = [
     // ✅ 第一批变换（Cylinder）
     [
       ...createTranslationMatrix(1, 0, 0),
@@ -517,21 +525,116 @@ async function runExample() {
     ],
   ];
 
+  let toggleState = false;
+
+  const indexSets = [
+    {
+      Cylinder: [0, 1, 3], // Cylinder: 保留 0, 1, 3（去掉 2）
+      Torus: [0, 2, 4, 6, 8], // Torus: 只保留索引 0, 2, 4, 6, 8
+      X: [1, 3, 5, 7], // X: 只保留索引 1, 3, 5, 7
+    },
+    {
+      Cylinder: [0, 1, 3], // Cylinder: 保留 0, 1, 3（去掉 2）
+      Torus: [1, 3, 5, 7], // Torus: 只保留索引 1, 3, 5, 7
+      X: [0, 2, 4, 6, 8], // X: 只保留索引 0, 2, 4, 6, 8
+    },
+  ];
+
+  let hiddenIndices = {
+    Torus: new Array(9).fill(false), // Torus 组（9 个实例）
+    X: new Array(9).fill(false), // X 组（9 个实例）
+  };
+
+  const toggleInstances = (index) => {
+    if (index >= 1 && index <= 9) {
+      hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1]; // 切换状态
+    } else if (index >= 10 && index <= 18) {
+      hiddenIndices.X[index - 10] = !hiddenIndices.X[index - 10]; // 切换状态
+    }
+
+    console.log(`Toggled Index: ${index}`, hiddenIndices);
+    console.log(`instanceTransforms:`, instanceTransforms);
+
+    // **确保每次按 16 个 float 进行分割**
+    const splitInstances = (instances, hiddenArray) => {
+      return instances.reduce((acc, _, i) => {
+        if (i % 16 === 0) {
+          // 只处理 4x4 矩阵的起始索引
+          const instanceIndex = i / 16; // 计算实例索引
+          if (!hiddenArray[instanceIndex]) {
+            // 仅保留未隐藏的实例
+            acc.push(...instances.slice(i, i + 16));
+          }
+        }
+        return acc;
+      }, []);
+    };
+
+    // 过滤出可见的实例
+    const filteredTransforms = [
+      instanceTransforms[0], // Cylinder 始终不变
+      splitInstances(instanceTransforms[1], hiddenIndices.Torus), // 按 16 float 过滤 Torus
+      splitInstances(instanceTransforms[2], hiddenIndices.X) // 按 16 float 过滤 X
+  ];
+
+    console.log(`filteredTransforms:`, filteredTransforms);
+    return filteredTransforms;
+  };
+
+  function updateInstanceBuffer(index) {
+    const newInstanceTransforms = toggleInstances(index);
+    console.log("newInstanceTransforms:", newInstanceTransforms);
+
+    const flattenInstanceTransforms = new Float32Array(
+      newInstanceTransforms.flat(Infinity)
+    );
+
+    device.queue.writeBuffer(instanceBuffer, 0, flattenInstanceTransforms);
+
+    instanceCountCylinder = Math.floor(newInstanceTransforms[0].length / 16);
+    instanceCountTorus = Math.floor(newInstanceTransforms[1].length / 16);
+    instanceCountX = Math.floor(newInstanceTransforms[2].length / 16);
+
+    console.log(
+      `Updated Instance Count - Cylinder: ${instanceCountCylinder}, Torus: ${instanceCountTorus}, X: ${instanceCountX}`
+    );
+
+    render(); // 重新渲染
+  }
+
+  document.querySelectorAll(`[id^="toggle"]`).forEach((button) => {
+    button.addEventListener(`click`, (event) => {
+      const id = event.target.id;
+      const index = parseInt(id.replace(`toggle`, ``), 10);
+      console.log(`index:`, index);
+      updateInstanceBuffer(index);
+    });
+  });
+
+  // document.getElementById("toggle1").addEventListener("click", () => {
+  //   // toggleInstances(); // 切换状态
+  //   updateInstanceBuffer(); // 更新 WebGPU 实例
+  // });
+
   // const instance2Transforms = new Float32Array([
   //   ...createTranslationMatrix(-2, 0, 0), // 左移1单位
   // ])
 
   // const instanceCount = instanceTransforms.length / 16;
   // 计算实例数量
-  const instanceCountCylinder = instanceTransforms[0].length / 16;
-  const instanceCountTorus = instanceTransforms[1].length / 16;
-  const instanceCountX = instanceTransforms[2].length / 16;
+  let instanceCountCylinder = instanceTransforms[0].length / 16;
+  let instanceCountTorus = instanceTransforms[1].length / 16;
+  let instanceCountX = instanceTransforms[2].length / 16;
   console.log(`instanceCountCylinder: ${instanceCountCylinder}`);
   console.log(`instanceCountTorus: ${instanceCountTorus}`);
   console.log(`instanceCountX: ${instanceCountX}`);
 
   const flattenInstanceTransforms = new Float32Array(
-    instanceTransforms.flat(2) // 展平二维数组为一维数组
+    instanceTransforms.flat(Infinity) // 展平二维数组为一维数组
+  );
+  console.log(
+    `flattenInstanceTransforms.length:`,
+    flattenInstanceTransforms.length
   );
 
   // 创建实例缓冲区
@@ -545,13 +648,23 @@ async function runExample() {
   device.queue.writeBuffer(instanceBuffer, 0, flattenInstanceTransforms);
 
   // 定义顶点缓冲区布局
+  // const vertexBufferLayout = [
+  //   {
+  //     arrayStride: 36, // 9 * 4 = 36 bytes per vertex
+  //     attributes: [
+  //       { format: "float32x3", offset: 0, shaderLocation: 0 }, // 顶点坐标
+  //       { format: "float32x3", offset: 12, shaderLocation: 1 }, // 法线
+  //       { format: "float32x3", offset: 24, shaderLocation: 2 }, // 颜色
+  //     ],
+  //   },
+  // ];
   const vertexBufferLayout = [
     {
-      arrayStride: 36, // 9 * 4 = 36 bytes per vertex
+      arrayStride: 40, // 10*4 = 40 bytes per vertex
       attributes: [
         { format: "float32x3", offset: 0, shaderLocation: 0 }, // 顶点坐标
         { format: "float32x3", offset: 12, shaderLocation: 1 }, // 法线
-        { format: "float32x3", offset: 24, shaderLocation: 2 }, // 颜色
+        { format: "float32x4", offset: 24, shaderLocation: 2 }, // 颜色（RGBA）
       ],
     },
   ];
@@ -660,6 +773,18 @@ async function runExample() {
       targets: [
         {
           format: canvasFormat,
+          blend: {
+            color: {
+              srcFactor: "src-alpha",
+              dstFactor: "one-minus-src-alpha",
+              operation: "add",
+            },
+            alpha: {
+              srcFactor: "one",
+              dstFactor: "one-minus-src-alpha",
+              operation: "add",
+            },
+          },
         },
       ],
     },
@@ -671,6 +796,7 @@ async function runExample() {
   });
 
   // 渲染
+  // prettier-ignore
   const render = () => {
     const encoder = device.createCommandEncoder();
     if (!encoder) {
@@ -701,30 +827,17 @@ async function runExample() {
     // 渲染lineSegment
     renderPass.setVertexBuffer(0, vertexBuffer_lineSegment);
     // renderPass.setVertexBuffer(1, instanceBuffer); // **绑定 Instance Buffer**
-    renderPass.draw(
-      vertexData_lineSegment.length / 9,
-      instanceCountCylinder,
-      0,
-      0
-    ); // **多实例渲染**
+    renderPass.draw(vertexData_lineSegment.length / 10, instanceCountCylinder, 0, 0); // **多实例渲染**
 
     // 渲染torus
     renderPass.setVertexBuffer(0, vertexBuffer_torus);
-    renderPass.draw(
-      vertexData_torus.length / 9,
-      instanceCountTorus,
-      0,
-      instanceCountCylinder
-    );
+    renderPass.draw(vertexData_torus.length / 10, instanceCountTorus, 0, instanceCountCylinder);
 
     // 渲染X
     renderPass.setVertexBuffer(0, vertexBuffer_X);
-    renderPass.draw(
-      vertexData_X.length / 9,
-      instanceCountX,
-      0,
-      instanceCountCylinder + instanceCountTorus
-    );
+    renderPass.draw(vertexData_X.length / 10, instanceCountX, 0, instanceCountCylinder + instanceCountTorus);
+
+    // console.log(`vertexData_X.length / 10: ${vertexData_X.length / 10}`)
 
     renderPass.end();
     device.queue.submit([encoder.finish()]);
@@ -901,8 +1014,22 @@ async function runExample() {
   //   }
   // });
 
+  // 更新alpha
+  const updateAlpha = () => {
+    // let instanceTransforms = flattenInstanceTransforms.slice(); // 复制当前变换数据
+    // // 修改 Alpha
+    let newVertexData = new Float32Array(vertexData_X); // 复制原始数据
+
+    for (let i = 0; i < newVertexData.length / 10; i++) {
+      // 每 10 个 float 是一个顶点
+      newVertexData[i * 10 + 9] = 0.0; // 第 10 个 float 是 Alpha 通道
+    }
+    device.queue.writeBuffer(vertexBuffer_X, 0, newVertexData);
+  };
+
   const animationLoop = () => {
     updateUniforms();
+    // updateAlpha();
     render();
     requestAnimationFrame(animationLoop);
   };
@@ -915,6 +1042,8 @@ async function runExample() {
   // };
 
   updateUniforms();
+
+  // updateAlpha();
 
   render();
 
