@@ -246,7 +246,7 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
   return vertices;
 };
 
-const torus = (R = 1.0, r = 0.1, segmentMain = 24, segmentTube = 24) => {
+const torus = (R = 0.6, r = 0.1, segmentMain = 24, segmentTube = 24) => {
   const angleStepMain = (Math.PI * 2) / segmentMain; // 主环角度步进
   const angleStepTube = (Math.PI * 2) / segmentTube; // 截面角度步进
 
@@ -319,7 +319,7 @@ const torus = (R = 1.0, r = 0.1, segmentMain = 24, segmentTube = 24) => {
 
 const X = () => {
   let segment = 24;
-  let cylinderVertices = cylinder(undefined, 2.0, undefined);
+  let cylinderVertices = cylinder(undefined, 1.6, undefined);
   console.log("Original Cylinder Vertex Count:", cylinderVertices.length / 9); // 调试信息
 
   let rotatedVertices1 = rotateVertices(
@@ -475,24 +475,74 @@ async function runExample() {
   device.queue.writeBuffer(vertexBuffer_X, 0, vertexData_X);
 
   // 创建实例数据
-  const instanceTransforms = new Float32Array([
-    ...createTranslationMatrix(1, 0, 0), // 右移1单位
-    ...createTranslationMatrix(-1, 0, 0), // 左移1单位
-    ...multiplyMatrices(createTranslationMatrix(1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 上移1单位，绕Z轴旋转90°
-    ...multiplyMatrices(createTranslationMatrix(-1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 下移1单位，绕Z轴旋转-90°
-  ]);
+  // prettier-ignore
+  // const instanceTransforms = new Float32Array([
+  //   ...createTranslationMatrix(1, 0, 0), // 右移1单位
+  //   ...createTranslationMatrix(-1, 0, 0), // 左移1单位
+  //   ...multiplyMatrices(createTranslationMatrix(1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 上移1单位，绕Z轴旋转90°
+  //   ...multiplyMatrices(createTranslationMatrix(-1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)), // 下移1单位，绕Z轴旋转-90°
+  // ]);
 
-  const instanceCount = instanceTransforms.length / 16;
+  const instanceTransforms = [
+    // ✅ 第一批变换（Cylinder）
+    [
+      ...createTranslationMatrix(1, 0, 0),
+      ...createTranslationMatrix(-1, 0, 0),
+      ...multiplyMatrices(createTranslationMatrix(1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)),
+      ...multiplyMatrices(createTranslationMatrix(-1, 0, 0), createRotationMatrix(0, 0, Math.PI / 2)),
+    ],
+    // ✅ 第二批变换（Torus）
+    [
+      ...createTranslationMatrix(-2, 2, 0),
+      ...createTranslationMatrix(0, 2, 0),
+      ...createTranslationMatrix(2, 2, 0),
+      ...createTranslationMatrix(-2, 0, 0),
+      ...createTranslationMatrix(0, 0, 0),
+      ...createTranslationMatrix(2, 0, 0),
+      ...createTranslationMatrix(-2, -2, 0),
+      ...createTranslationMatrix(0, -2, 0),
+      ...createTranslationMatrix(2, -2, 0),
+    ],
+    // ✅ 第三批变换（X）
+    [
+      ...createTranslationMatrix(-2, 2, 0),
+      ...createTranslationMatrix(0, 2, 0),
+      ...createTranslationMatrix(2, 2, 0),
+      ...createTranslationMatrix(-2, 0, 0),
+      ...createTranslationMatrix(0, 0, 0),
+      ...createTranslationMatrix(2, 0, 0),
+      ...createTranslationMatrix(-2, -2, 0),
+      ...createTranslationMatrix(0, -2, 0),
+      ...createTranslationMatrix(2, -2, 0),
+    ],
+  ];
+
+  // const instance2Transforms = new Float32Array([
+  //   ...createTranslationMatrix(-2, 0, 0), // 左移1单位
+  // ])
+
+  // const instanceCount = instanceTransforms.length / 16;
+  // 计算实例数量
+  const instanceCountCylinder = instanceTransforms[0].length / 16;
+  const instanceCountTorus = instanceTransforms[1].length / 16;
+  const instanceCountX = instanceTransforms[2].length / 16;
+  console.log(`instanceCountCylinder: ${instanceCountCylinder}`);
+  console.log(`instanceCountTorus: ${instanceCountTorus}`);
+  console.log(`instanceCountX: ${instanceCountX}`);
+
+  const flattenInstanceTransforms = new Float32Array(
+    instanceTransforms.flat(2) // 展平二维数组为一维数组
+  );
 
   // 创建实例缓冲区
   const instanceBuffer = device.createBuffer({
     label: "Instance Transform Buffer",
-    size: instanceTransforms.byteLength,
+    size: flattenInstanceTransforms.byteLength,
     // usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  device.queue.writeBuffer(instanceBuffer, 0, instanceTransforms);
+  device.queue.writeBuffer(instanceBuffer, 0, flattenInstanceTransforms);
 
   // 定义顶点缓冲区布局
   const vertexBufferLayout = [
@@ -552,11 +602,11 @@ async function runExample() {
         binding: 0, // **实例缓冲区**
         visibility: GPUShaderStage.VERTEX,
         buffer: {
-          type: "read-only-storage"
-        }
-      }
-    ]
-  })
+          type: "read-only-storage",
+        },
+      },
+    ],
+  });
 
   // 绑定组<-组布局<-统一缓冲区<-参数
   const bindGroup = device.createBindGroup({
@@ -565,7 +615,7 @@ async function runExample() {
       {
         binding: 0, // **Uniform Buffer**
         resource: {
-          buffer: uniformBuffer, 
+          buffer: uniformBuffer,
         },
       },
     ],
@@ -576,10 +626,10 @@ async function runExample() {
     entries: [
       {
         binding: 0,
-        resource: { buffer: instanceBuffer }
-      }
-    ]
-  })
+        resource: { buffer: instanceBuffer },
+      },
+    ],
+  });
 
   // 定义管线布局<-组布局<-统一缓冲区<-参数
   const pipelineLayout = device.createPipelineLayout({
@@ -631,7 +681,7 @@ async function runExample() {
         {
           view: context.getCurrentTexture().createView(),
           loadOp: "clear",
-          clearValue: { r: 0.9, g: 0.9, b: 0.9, a: 1.0 },
+          clearValue: { r: 0.9, g: 0.9, b: 0.9, a: 0.0 },
           storeOp: "store",
         },
       ],
@@ -651,15 +701,30 @@ async function runExample() {
     // 渲染lineSegment
     renderPass.setVertexBuffer(0, vertexBuffer_lineSegment);
     // renderPass.setVertexBuffer(1, instanceBuffer); // **绑定 Instance Buffer**
-    renderPass.draw(vertexData_lineSegment.length / 9, instanceCount); // **多实例渲染**
+    renderPass.draw(
+      vertexData_lineSegment.length / 9,
+      instanceCountCylinder,
+      0,
+      0
+    ); // **多实例渲染**
 
     // 渲染torus
     renderPass.setVertexBuffer(0, vertexBuffer_torus);
-    renderPass.draw(vertexData_torus.length / 9);
+    renderPass.draw(
+      vertexData_torus.length / 9,
+      instanceCountTorus,
+      0,
+      instanceCountCylinder
+    );
 
     // 渲染X
     renderPass.setVertexBuffer(0, vertexBuffer_X);
-    renderPass.draw(vertexData_X.length / 9);
+    renderPass.draw(
+      vertexData_X.length / 9,
+      instanceCountX,
+      0,
+      instanceCountCylinder + instanceCountTorus
+    );
 
     renderPass.end();
     device.queue.submit([encoder.finish()]);
@@ -693,49 +758,63 @@ async function runExample() {
     ]);
     let right = normalize(cross(forward, up));
     let newUp = cross(right, forward);
-  
+
     // 旋转角度（绕 X 和 Y 轴）
-    const cosX = Math.cos(rotationX), sinX = Math.sin(rotationX);
-    const cosY = Math.cos(rotationY), sinY = Math.sin(rotationY);
-  
+    const cosX = Math.cos(rotationX),
+      sinX = Math.sin(rotationX);
+    const cosY = Math.cos(rotationY),
+      sinY = Math.sin(rotationY);
+
     // **绕 X 轴旋转（上下旋转）**
     let rotatedForwardX = [
       forward[0],
       forward[1] * cosX - forward[2] * sinX,
-      forward[1] * sinX + forward[2] * cosX
+      forward[1] * sinX + forward[2] * cosX,
     ];
     let rotatedUpX = [
       newUp[0],
       newUp[1] * cosX - newUp[2] * sinX,
-      newUp[1] * sinX + newUp[2] * cosX
+      newUp[1] * sinX + newUp[2] * cosX,
     ];
-  
+
     // **绕 Y 轴旋转（左右旋转）**
     let rotatedForward = [
       rotatedForwardX[0] * cosY - rotatedForwardX[2] * sinY,
       rotatedForwardX[1],
-      rotatedForwardX[0] * sinY + rotatedForwardX[2] * cosY
+      rotatedForwardX[0] * sinY + rotatedForwardX[2] * cosY,
     ];
     let rotatedRight = [
       right[0] * cosY - right[2] * sinY,
       right[1],
-      right[0] * sinY + right[2] * cosY
+      right[0] * sinY + right[2] * cosY,
     ];
-  
+
     let rotatedUp = cross(rotatedRight, rotatedForward);
-  
+
     // 计算新的 `viewMatrix`
     return [
-      rotatedRight[0], rotatedUp[0], -rotatedForward[0], 0,
-      rotatedRight[1], rotatedUp[1], -rotatedForward[1], 0,
-      rotatedRight[2], rotatedUp[2], -rotatedForward[2], 0,
-      -dot(rotatedRight, eye), -dot(rotatedUp, eye), dot(rotatedForward, eye), 1
+      rotatedRight[0],
+      rotatedUp[0],
+      -rotatedForward[0],
+      0,
+      rotatedRight[1],
+      rotatedUp[1],
+      -rotatedForward[1],
+      0,
+      rotatedRight[2],
+      rotatedUp[2],
+      -rotatedForward[2],
+      0,
+      -dot(rotatedRight, eye),
+      -dot(rotatedUp, eye),
+      dot(rotatedForward, eye),
+      1,
     ];
   };
 
   const eye = [0, 0, 8],
-        center = [0, 0, 0],
-        up = [0, 1, 0];
+    center = [0, 0, 0],
+    up = [0, 1, 0];
 
   const viewMatrix = createViewMatrix(eye, center, up);
 
