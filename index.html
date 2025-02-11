@@ -1,9 +1,16 @@
 <html>
   <head>
     <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.min.js"></script>
   </head>
   <body>
-    <h1>Tic-Tac-Toe (3x3)</h1>
+    <div>
+      <h1>Tic-Tac-Toe (3x3)</h1>
+      <span>
+          <input type="radio" name="mode" value="1" checked/>1P
+          <input type="radio" name="mode" value="2" />2P
+      </span>
+    </div>
 
     <!-- Create the canvas -->
     <canvas id="canvas_example" width="400" height="400"></canvas>

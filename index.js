@@ -1091,6 +1091,55 @@ run();
 // };
 // checkTrigger();
 
+// const socket = new WebSocket("ws://localhost:5000");
+const socket = io("ws://localhost:5000");
+
+// 监听连接
+socket.on("connect", () => {
+  console.log("✅ 连接 WebSocket 成功！");
+});
+
+// 监听消息
+socket.on("update", (data) => {
+  // const data = JSON.parse(event.data);
+  console.log("🎯 服务器响应:", data);
+  if (data.number != 0) {
+    const button = document.getElementById("toggle" + data.number);
+    if (button) {
+      let piece = "";
+      if (data.parity == 1) {
+        piece = "O";
+        button.click();
+        console.log(piece);
+      } else if (data.parity == 0) {
+        piece = "X";
+        button.click();
+        button.click();
+        console.log(piece);
+      }
+      if ("win" in data) {
+        if (data.win == true) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              alert(piece + " win!");
+            });
+          });
+        } else if (data.win == false) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              alert("Tie!");
+            });
+          });
+        }
+      }
+      console.log(`✅ 触发按钮: ${data.number}`);
+    }
+  } else if (data.number == 0) {
+    console.log(`重置游戏`);
+    updateInstanceBuffer(null);
+  }
+});
+
 canvas.addEventListener("click", async (event) => {
   // 获取鼠标点击的屏幕坐标 (像素)
   const rect = canvas.getBoundingClientRect();
@@ -1131,66 +1180,70 @@ canvas.addEventListener("click", async (event) => {
     const index = row * 3 + col + 1; // 计算格子编号
     console.log(`✅ 点击格子编号: ${index}`);
 
-    // **🚀 发送编号到 Python**
-    try {
-      const response = await fetch("http://localhost:5000/info", {
-        method: "POST",
-        mode: "cors", // 允许跨域请求
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ number: index }),
-      });
+    // socket.send(JSON.stringify({ number: index }));
+    socket.emit("info", { number: index })
+    // // **🚀 发送编号到 Python**
+    // try {
+    //   const response = await fetch("http://localhost:5000/info", {
+    //     method: "POST",
+    //     mode: "cors", // 允许跨域请求
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ number: index }),
+    //   });
 
-      const data = await response.json();
-      console.log("🎯 服务器响应:", data);
-      if (data.number != 0) {
-        const button = document.getElementById("toggle" + data.number);
-        if (button) {
-          let piece = "";
-          if (data.parity == 1) {
-            piece = "O";
-            button.click();
-            console.log(piece);
-          } else if (data.parity == 0) {
-            piece = "X";
-            button.click();
-            button.click();
-            console.log(piece);
-          }
-          if ("win" in data) {
-            if (data.win == true) {
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  alert(piece + " win!");
-                });
-              });
-            } else if (data.win == false) {
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  alert("Tie!");
-                });
-              });
-            }
-          }
-          console.log(`✅ 触发按钮: ${data.number}`);
-        }
-      } else if (data.number == 0) {
-        console.log(`重置游戏`);
-        updateInstanceBuffer(null);
-      }
-    } catch (error) {
-      console.error("❌ 发送编号失败:", error);
-    }
+    //   const data = await response.json();
+    //   console.log("🎯 服务器响应:", data);
+    //   if (data.number != 0) {
+    //     const button = document.getElementById("toggle" + data.number);
+    //     if (button) {
+    //       let piece = "";
+    //       if (data.parity == 1) {
+    //         piece = "O";
+    //         button.click();
+    //         console.log(piece);
+    //       } else if (data.parity == 0) {
+    //         piece = "X";
+    //         button.click();
+    //         button.click();
+    //         console.log(piece);
+    //       }
+    //       if ("win" in data) {
+    //         if (data.win == true) {
+    //           requestAnimationFrame(() => {
+    //             requestAnimationFrame(() => {
+    //               alert(piece + " win!");
+    //             });
+    //           });
+    //         } else if (data.win == false) {
+    //           requestAnimationFrame(() => {
+    //             requestAnimationFrame(() => {
+    //               alert("Tie!");
+    //             });
+    //           });
+    //         }
+    //       }
+    //       console.log(`✅ 触发按钮: ${data.number}`);
+    //     }
+    //   } else if (data.number == 0) {
+    //     console.log(`重置游戏`);
+    //     updateInstanceBuffer(null);
+    //   }
+    // } catch (error) {
+    //   console.error("❌ 发送编号失败:", error);
+    // }
   }
   console.log(`🖱️ 点击屏幕坐标: (${x}, ${y})`);
 });
 
 // 刷新重置游戏
-window.addEventListener("beforeunload", async () => {
-  await fetch("http://localhost:5000/info", {
-    method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ number: 0 }),
-    keepalive: true, // **确保请求在页面关闭时仍然被发送**
-  });
-});
+// window.addEventListener("beforeunload", async () => {
+//   // await fetch("http://localhost:5000/info", {
+//   //   method: "POST",
+//   //   mode: "cors",
+//   //   headers: { "Content-Type": "application/json" },
+//   //   body: JSON.stringify({ number: 0 }),
+//   //   keepalive: true, // **确保请求在页面关闭时仍然被发送**
+//   // });
+//   // socket.send(JSON.stringify({ number: 0 }));
+//   socket.emit("info", { number: 0 })
+// });

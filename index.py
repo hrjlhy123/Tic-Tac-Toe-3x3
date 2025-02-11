@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import eventlet
 import time
 import threading
 import random
 
 app = Flask(__name__)
 CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 # class RandomNumberPicker:
 #     def __init__(self):
@@ -58,8 +61,8 @@ CORS(app)
 # threading.Thread(target=auto_trigger, daemon=True).start()
 
 
-def parity(number):  # odd or even
-    return 1 if len(number) % 2 == 1 else 0
+def parity(numbers):  # odd or even
+    return 1 if len(numbers) % 2 == 1 else 0
 
 
 def check_win(numbers):
@@ -81,22 +84,66 @@ def check_win(numbers):
             if_win = True
             break
     print("if_win:", if_win)
-    return if_win 
+    return if_win
+
+
+def log(numbers):
+    with open("tictactoe.txt", "w") as file:
+        for index, num in enumerate(numbers):
+            if index % 2 == 0:
+                file.write(f"O: {num}\n")
+            else:
+                file.write(f"X: {num}\n")
+
 
 picked_numbers = []
 
 
-@app.route("/info", methods=["POST"])
-def receive():
+# @app.route("/info", methods=["POST"])
+# def receive():
+#     global picked_numbers
+
+#     data = request.get_json()
+
+#     number = data.get("number")
+
+#     if number != 0:
+#         if number not in picked_numbers:
+#             picked_numbers.append(number)
+#             if len(picked_numbers) >= 5:
+#                 numbers = []
+#                 for index, num in enumerate(picked_numbers):
+#                     if index % 2 != len(picked_numbers) % 2:
+#                         numbers.append(num)
+#                 if_win = check_win(numbers)
+#                 if if_win or len(picked_numbers) == 9:
+#                     result = {"number": number, "parity": parity(picked_numbers), "win": if_win}
+#                     return jsonify(result)
+
+
+#             print("picked_numbers:", picked_numbers)
+#             result = {"number": number, "parity": parity(picked_numbers)}
+#             # print(f"✅ 接收到前端点击的编号: {number}")
+#             return jsonify(result)
+#     elif number == 0:
+#         picked_numbers = []
+#         print("picked_numbers:", picked_numbers)
+#         result = {"number": number, "parity": parity(picked_numbers)}
+#         print(f"重置游戏")
+#         return jsonify(result)
+#     return jsonify({"status": "error", "message": "Invalid data"}), 400
+@socketio.on("info")
+def info(data):
     global picked_numbers
 
-    data = request.get_json()
+    # data = request.get_json()
 
     number = data.get("number")
 
     if number != 0:
         if number not in picked_numbers:
             picked_numbers.append(number)
+            print("picked_numbers:", picked_numbers)
             if len(picked_numbers) >= 5:
                 numbers = []
                 for index, num in enumerate(picked_numbers):
@@ -104,22 +151,41 @@ def receive():
                         numbers.append(num)
                 if_win = check_win(numbers)
                 if if_win or len(picked_numbers) == 9:
-                    result = {"number": number, "parity": parity(picked_numbers), "win": if_win}
-                    return jsonify(result)
+                    result = {
+                        "number": number,
+                        "parity": parity(picked_numbers),
+                        "win": if_win,
+                    }
+                    emit("update", result, broadcast=True)
+                else:
+                    result = {"number": number, "parity": parity(picked_numbers)}
+                    emit("update", result, broadcast=True)
+            else:
+                result = {"number": number, "parity": parity(picked_numbers)}
+                emit("update", result, broadcast=True)
+
+            log(picked_numbers)
+    # elif number == 0:
+    #     picked_numbers = []
+    #     print("picked_numbers:", picked_numbers)
+    #     result = {"number": number, "parity": parity(picked_numbers)}
+    #     print(f"重置游戏")
+    #     emit("update", result, broadcast=True)
 
 
-            print("picked_numbers:", picked_numbers)
-            result = {"number": number, "parity": parity(picked_numbers)}
-            # print(f"✅ 接收到前端点击的编号: {number}")
-            return jsonify(result)
-    elif number == 0:
-        picked_numbers = []
-        print("picked_numbers:", picked_numbers)
-        result = {"number": number, "parity": parity(picked_numbers)}
-        print(f"重置游戏")
-        return jsonify(result)
-    return jsonify({"status": "error", "message": "Invalid data"}), 400
+@socketio.on("disconnect")
+def handle_disconnect():
+    global picked_numbers
+    picked_numbers = []
+    log(picked_numbers)
+    print("🚨 客户端断开连接，自动重置游戏")
 
+
+# if __name__ == "__main__":
+#     app.run(host="localhost", port=5000)
+
+# if __name__ == "__main__":
+#     socketio.run(app, host="localhost", port=5000, debug=True)
 
 if __name__ == "__main__":
-    app.run(host="localhost", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
