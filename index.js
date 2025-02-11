@@ -14,6 +14,14 @@ const cross = (a, b) => [
 
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
+const mat3Multiply = (mat, vec) => {
+  return [
+    mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2],
+    mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2],
+    mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2]
+  ];
+};
+
 const rotateVertices = (vertices, angle, axis) => {
   let rotated = [];
   let cosA = Math.cos(angle);
@@ -35,21 +43,15 @@ const rotateVertices = (vertices, angle, axis) => {
 
   for (let i = 0; i < vertices.length; i += 10) {
     let v = [vertices[i], vertices[i + 1], vertices[i + 2]]; // 取出顶点坐标 (x, y, z)
+    let vNew = mat3Multiply(rotationMatrix, v)
 
-    let xNew =
-      rotationMatrix[0] * v[0] +
-      rotationMatrix[1] * v[1] +
-      rotationMatrix[2] * v[2];
-    let yNew =
-      rotationMatrix[3] * v[0] +
-      rotationMatrix[4] * v[1] +
-      rotationMatrix[5] * v[2];
-    let zNew =
-      rotationMatrix[6] * v[0] +
-      rotationMatrix[7] * v[1] +
-      rotationMatrix[8] * v[2];
+    let n = [vertices[i + 3], vertices[i + 4], vertices[i + 5]];
+    let nNew = mat3Multiply(rotationMatrix, n)
 
-    rotated.push(xNew, yNew, zNew, ...vertices.slice(i + 3, i + 10)); // 复制法线、颜色等信息
+    rotated.push(
+      vNew[0], vNew[1], vNew[2],  // 旋转后的顶点坐标
+      nNew[0], nNew[1], nNew[2],  // 旋转后的法线
+      ...vertices.slice(i + 6, i + 10)); // 复制颜色等信息
   }
 
   return rotated;
@@ -122,7 +124,7 @@ const multiplyMatrices = (a, b) => {
 const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
 
   const angleStep = (Math.PI * 2) / segment;
-  const angleStep2 = Math.PI / 2 / (segment / 2);
+  const angleStep2 = (Math.PI / 2) / (segment / 2);
 
   let vertices = [];
   // let indices = []
@@ -144,31 +146,40 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
   // Logic-1: Generate hemisphere (base)
   for (let i = 0; i < segment / 2; i++) {
     let phi1 = i * angleStep2,
-      phi2 = (i + 1) * angleStep2;
+        phi2 = (i + 1) * angleStep2;
 
     let y1 = -radius * Math.cos(phi1) - height / 2,
-      y2 = -radius * Math.cos(phi2) - height / 2;
+        y2 = -radius * Math.cos(phi2) - height / 2;
 
     let r1 = radius * Math.sin(phi1),
-      r2 = radius * Math.sin(phi2);
+        r2 = radius * Math.sin(phi2);
 
     for (let j = 0; j <= segment; j++) {
       let theta = j * angleStep,
-        x1 = r1 * Math.cos(theta),
-        z1 = r1 * Math.sin(theta),
-        x2 = r2 * Math.cos(theta),
-        z2 = r2 * Math.sin(theta);
+          x1 = r1 * Math.cos(theta),
+          z1 = r1 * Math.sin(theta),
+          x2 = r2 * Math.cos(theta),
+          z2 = r2 * Math.sin(theta);
 
-      let n1 = normalize([x1, y1, z1]),
-        n2 = normalize([x2, y2, z2]);
+      let n1 = normalize([x1, y1 + height / 2, z1]),
+          n2 = normalize([x2, y2 + height / 2, z2]),
+          n3 = normalize([r1 * Math.cos(theta + angleStep), y1 + height / 2, r1 * Math.sin(theta + angleStep)]),
+          n4 = normalize([r2 * Math.cos(theta + angleStep), y2 + height / 2, r2 * Math.sin(theta + angleStep)]);
+    
 
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
+      // vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
+      // vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      // vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
 
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
-      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      // vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      // vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 1.0, 0.0, 1.0);
+      // vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n4[0], n4[1], n4[2], 1.0, 1.0, 1.0, 1.0);
     }
   }
 
@@ -189,58 +200,84 @@ const cylinder = (radius = 0.1, height = 6.0, segment = 24) => {
   // Logic-2: Generate hemisphere (top)
   for (let i = 0; i < segment / 2; i++) {
     let phi1 = Math.PI + i * angleStep2,
-      phi2 = Math.PI + (i + 1) * angleStep2;
+        phi2 = Math.PI + (i + 1) * angleStep2;
 
     let y1 = -radius * Math.cos(phi1) + height / 2,
-      y2 = -radius * Math.cos(phi2) + height / 2;
+        y2 = -radius * Math.cos(phi2) + height / 2;
 
     let r1 = radius * Math.sin(phi1),
-      r2 = radius * Math.sin(phi2);
+        r2 = radius * Math.sin(phi2);
 
     for (let j = 0; j <= segment; j++) {
       let theta = j * angleStep,
-        x1 = r1 * Math.cos(theta),
-        z1 = r1 * Math.sin(theta),
-        x2 = r2 * Math.cos(theta),
-        z2 = r2 * Math.sin(theta);
+          x1 = r1 * Math.cos(theta),
+          z1 = r1 * Math.sin(theta),
+          x2 = r2 * Math.cos(theta),
+          z2 = r2 * Math.sin(theta);
 
-      let n1 = normalize([x1, y1, z1]),
-        n2 = normalize([x2, y2, z2]);
+      let n1 = normalize([x1, y1 - height / 2, z1]),
+          n2 = normalize([x2, y2 - height / 2, z2]),
+          n3 = normalize([r1 * Math.cos(theta + angleStep), y1 - height / 2, r1 * Math.sin(theta + angleStep)]),
+          n4 = normalize([r2 * Math.cos(theta + angleStep), y2 - height / 2, r2 * Math.sin(theta + angleStep)]);
+    
 
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
+      // vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
+      // vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
+      // vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
 
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
-      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
-      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
+      // vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
+      // vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n1[0], n1[1], n1[2], 1.0, 0.5, 0.5, 1.0);
+      // vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n2[0], n2[1], n2[2], 0.5, 0.5, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(r1 * Math.cos(theta + angleStep), y1, r1 * Math.sin(theta + angleStep), n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(r2 * Math.cos(theta + angleStep), y2, r2 * Math.sin(theta + angleStep), n4[0], n4[1], n4[2], 1.0, 1.0, 1.0, 1.0);
     }
   }
 
   // Logic-3: Cylindrical (side)
   for (let i = 0; i <= segment; i++) {
     let angle1 = i * angleStep,
-      angle2 = (i + 1) * angleStep,
-      x1 = radius * Math.cos(angle1),
-      z1 = radius * Math.sin(angle1),
-      x2 = radius * Math.cos(angle2),
-      z2 = radius * Math.sin(angle2);
+        angle2 = (i + 1) * angleStep,
+        x1 = radius * Math.cos(angle1),
+        z1 = radius * Math.sin(angle1),
+        x2 = radius * Math.cos(angle2),
+        z2 = radius * Math.sin(angle2);
 
     // Calculate normal line
-    let nx1 = x1,
-      nz1 = z1,
-      nx2 = x2,
-      nz2 = z2;
+    // let nx1 = x1,
+    //     nz1 = z1,
+    //     nx2 = x2,
+    //     nz2 = z2;
+
+    let n1 = normalize([x1, 0, z1]), // 底部左侧
+        n2 = normalize([x1, 0, z1]), // 顶部左侧
+        n3 = normalize([x2, 0, z2]), // 顶部右侧
+        n4 = normalize([x2, 0, z2]); // 底部右侧
 
     // Logic-3-1: Triangle1 (A, B, C)
-    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0, 1.0);
-    vertices.push(x1, height / 2, z1, nx1, 0, nz1, 0.0, 0.0, 1.0, 1.0);
-    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0, 1.0);
+    // vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0, 1.0);
+    // vertices.push(x1, height / 2, z1, nx1, 0, nz1, 0.0, 0.0, 1.0, 1.0);
+    // vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0, 1.0);
+    // vertices.push(x1, -height / 2, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
+    // vertices.push(x1, height / 2, z1, n1[0], n1[1], n1[2], 0.0, 0.0, 1.0, 1.0);
+    // vertices.push(x2, height / 2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 0.0, 1.0);
+    vertices.push(x1, -height / 2, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 1.0, 1.0);
+    vertices.push(x1, height / 2, z1, n2[0], n2[1], n2[2], 1.0, 1.0, 1.0, 1.0);
+    vertices.push(x2, height / 2, z2, n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
 
     // Logic-3-2: Triangle2 (A, C, D)
-    vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0, 1.0);
-    vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0, 1.0);
-    vertices.push(x2, -height / 2, z2, nx2, 0, nz2, 0.0, 1.0, 0.0, 1.0);
+    // vertices.push(x1, -height / 2, z1, nx1, 0, nz1, 1.0, 0.0, 1.0, 1.0);
+    // vertices.push(x2, height / 2, z2, nx2, 0, nz2, 1.0, 1.0, 0.0, 1.0);
+    // vertices.push(x2, -height / 2, z2, nx2, 0, nz2, 0.0, 1.0, 0.0, 1.0);
+    // vertices.push(x1, -height / 2, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
+    // vertices.push(x2, height / 2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 0.0, 1.0);
+    // vertices.push(x2, -height / 2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 0.0, 1.0);
+    vertices.push(x1, -height / 2, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 1.0, 1.0);
+    vertices.push(x2, height / 2, z2, n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
+    vertices.push(x2, -height / 2, z2, n4[0], n4[1], n4[2], 1.0, 1.0, 1.0, 1.0);
   }
 
   return vertices;
@@ -303,13 +340,19 @@ const torus = (R = 0.6, r = 0.1, segmentMain = 24, segmentTube = 24) => {
       ]);
 
       // 添加两个三角形 (四个点形成一个四边形)
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
-      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
-      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0, 1.0);
+      // vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
+      // vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 0.0, 1.0, 1.0, 1.0);
+      // vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0, 1.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(x2, y2, z2, n2[0], n2[1], n2[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
 
-      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
-      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0, 1.0);
-      vertices.push(x4, y4, z4, n4[0], n4[1], n4[2], 0.0, 1.0, 0.0, 1.0);
+      // vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 0.0, 1.0, 1.0);
+      // vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 0.0, 1.0);
+      // vertices.push(x4, y4, z4, n4[0], n4[1], n4[2], 0.0, 1.0, 0.0, 1.0);
+      vertices.push(x1, y1, z1, n1[0], n1[1], n1[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(x3, y3, z3, n3[0], n3[1], n3[2], 1.0, 1.0, 1.0, 1.0);
+      vertices.push(x4, y4, z4, n4[0], n4[1], n4[2], 1.0, 1.0, 1.0, 1.0);
     }
   }
 
@@ -350,7 +393,8 @@ struct DataStruct {
 }
 
 struct InstanceData {
-    modelMatrix: mat4x4<f32>
+    modelMatrix: mat4x4<f32>,
+    // normalMatrix: mat4x4<f32>
 }
 
 struct Uniforms {
@@ -358,7 +402,7 @@ struct Uniforms {
     viewMatrix: mat4x4<f32>, // View matrix (camera position)
     rotationX: f32,
     rotationY: f32,
-    padding: vec2<f32> // 16-byte alignment
+    position_mouse: vec2<f32>
 }
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -392,10 +436,14 @@ fn vertexMain(
 
     // 读取实例变换矩阵
     let modelMatrix = instances[instanceIndex].modelMatrix;
+    // let normalMatrix = instances[instanceIndex].normalMatrix;
+
     let worldPosition = modelMatrix * vec4f(coords, 1.0);
+    let worldNormal = normalize((modelMatrix * vec4f(normal, 0.0)).xyz);
 
     outData.pos = uniforms.projectionMatrix * uniforms.viewMatrix * worldPosition; // 4D
-    outData.normal = normal; //  transmission normal
+    // outData.normal = normal; //  transmission normal
+    outData.normal = worldNormal;
     outData.colors = colors;
     return outData;
 }
@@ -403,15 +451,18 @@ fn vertexMain(
 @fragment
 fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
     // let lightDirection = normalize(vec3f(1.0, 1.0, 1.0)); // oblique overhead light source
-    // let diffuse = max(dot(fragData.normal, lightDirection), 0.0);
-    // return vec4f(fragData.colors * diffuse, 1.0);
-    return fragData.colors;
+    let lightDirection = normalize(vec3f(uniforms.position_mouse.x, uniforms.position_mouse.y, 5.0));
+    let diffuse = max(dot(fragData.normal, lightDirection), 0.0);
+    return vec4f(fragData.colors.rgb * diffuse * 1.0, fragData.colors.a);
+    // return fragData.colors;
 }
 `;
 
 // 定义图形计算
 const canvas = document.getElementById("canvas_example");
 const run = async () => {
+  let normalizedX = 1.0, normalizedY = 1.0
+  
   if (!navigator.gpu) {
     throw new Error("WebGPU not supported");
   }
@@ -694,7 +745,7 @@ const run = async () => {
     entries: [
       {
         binding: 0, // **Uniform Buffer**
-        visibility: GPUShaderStage.VERTEX,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: {
           type: "uniform",
         },
@@ -966,17 +1017,18 @@ const run = async () => {
   //   ])
   //   device.queue.writeBuffer(uniformBuffer, 0, uniformData)
   // }
-  const updateUniforms = () => {
+  const updateUniforms = (x = 1.0, y = 1.0) => {
     const viewMatrix = createViewMatrix(eye, center, up, rotationX, rotationY);
 
     const uniformData = new Float32Array([
       ...projectionMatrix,
       ...viewMatrix,
       0,
-      0,
-      0,
-      0,
+      0, // rotationX, rotationY (8 bytes)
+      x,
+      y, // position_mouse (8 bytes)
     ]);
+
     device.queue.writeBuffer(uniformBuffer, 0, uniformData);
   };
 
@@ -1021,7 +1073,7 @@ const run = async () => {
   };
 
   const animationLoop = () => {
-    updateUniforms();
+    updateUniforms(normalizedX, normalizedY);
     // updateAlpha();
     render();
     requestAnimationFrame(animationLoop);
@@ -1034,7 +1086,7 @@ const run = async () => {
   //   requestAnimationFrame(animationLoop);
   // };
 
-  updateUniforms();
+  updateUniforms(normalizedX, normalizedY);
 
   // updateAlpha();
 
@@ -1052,209 +1104,230 @@ const run = async () => {
   });
 
   animationLoop();
-};
-run();
 
-// const checkTrigger = async () => {
-//   while (true) {
-//     try {
-//       const response = await fetch(
-//         "http://localhost:5000/trigger?" + Math.random()
-//       );
-//       // const text = await response.text();
-//       const data = await response.json();
-//       console.log("🎯 服务器返回:", data);
-//       // if (text === "toggle3") {
-//       //   document.getElementById("toggle3").click();
-//       // }
+  // const checkTrigger = async () => {
+  //   while (true) {
+  //     try {
+  //       const response = await fetch(
+  //         "http://localhost:5000/trigger?" + Math.random()
+  //       );
+  //       // const text = await response.text();
+  //       const data = await response.json();
+  //       console.log("🎯 服务器返回:", data);
+  //       // if (text === "toggle3") {
+  //       //   document.getElementById("toggle3").click();
+  //       // }
 
-//       if (data.number) {
-//         const button = document.getElementById(data.number);
-//         if (button) {
-//           if (data.parity == 1) {
-//             console.log("O");
-//             button.click();
-//           } else {
-//             console.log("X");
-//             button.click();
-//             button.click();
-//           }
+  //       if (data.number) {
+  //         const button = document.getElementById(data.number);
+  //         if (button) {
+  //           if (data.parity == 1) {
+  //             console.log("O");
+  //             button.click();
+  //           } else {
+  //             console.log("X");
+  //             button.click();
+  //             button.click();
+  //           }
 
-//           console.log(`✅ 触发按钮: ${data.number}`);
-//         }
-//       }
-//     } catch (error) {
-//       console.error("❌ 获取 trigger 失败", error);
-//     }
-//     await new Promise((resolve) => setTimeout(resolve, 100)); // 每 2 秒检查一次
-//   }
-// };
-// checkTrigger();
+  //           console.log(`✅ 触发按钮: ${data.number}`);
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error("❌ 获取 trigger 失败", error);
+  //     }
+  //     await new Promise((resolve) => setTimeout(resolve, 100)); // 每 2 秒检查一次
+  //   }
+  // };
+  // checkTrigger();
 
-// const socket = new WebSocket("ws://localhost:5000");
-const socket = io("ws://localhost:5000");
+  // const socket = new WebSocket("ws://localhost:5000");
+  const socket = io("ws://localhost:5000");
 
-// 监听连接
-socket.on("connect", () => {
-  console.log("✅ 连接 WebSocket 成功！");
-});
+  // 监听连接
+  socket.on("connect", () => {
+    console.log("✅ 连接 WebSocket 成功！");
+  });
 
-// 监听消息
-socket.on("update", (data) => {
-  // const data = JSON.parse(event.data);
-  console.log("🎯 服务器响应:", data);
-  if (data.number != 0) {
-    const button = document.getElementById("toggle" + data.number);
-    if (button) {
-      let piece = "";
-      if (data.parity == 1) {
-        piece = "O";
-        button.click();
-        console.log(piece);
-      } else if (data.parity == 0) {
-        piece = "X";
-        button.click();
-        button.click();
-        console.log(piece);
-      }
-      if ("win" in data) {
-        if (data.win == true) {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              alert(piece + " win!");
-            });
-          });
-        } else if (data.win == false) {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              alert("Tie!");
-            });
-          });
+  // 监听消息
+  socket.on("update", (data) => {
+    // const data = JSON.parse(event.data);
+    console.log("🎯 服务器响应:", data);
+    if (data.number != 0) {
+      const button = document.getElementById("toggle" + data.number);
+      if (button) {
+        let piece = "";
+        if (data.parity == 1) {
+          piece = "O";
+          button.click();
+          console.log(piece);
+        } else if (data.parity == 0) {
+          piece = "X";
+          button.click();
+          button.click();
+          console.log(piece);
         }
+        if ("win" in data) {
+          if (data.win == true) {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                alert(piece + " win!");
+                socket.emit("info", { number: 0 });
+                updateInstanceBuffer(null);
+              });
+            });
+          } else if (data.win == false) {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                alert("Tie!");
+                socket.emit("info", { number: 0 });
+                updateInstanceBuffer(null);
+              });
+            });
+          }
+        }
+        console.log(`✅ 触发按钮: ${data.number}`);
       }
-      console.log(`✅ 触发按钮: ${data.number}`);
+    } else if (data.number == 0) {
+      console.log(`重置游戏`);
+      updateInstanceBuffer(null);
     }
-  } else if (data.number == 0) {
-    console.log(`重置游戏`);
-    updateInstanceBuffer(null);
-  }
-});
+  });
 
-// 监听模式切换
-let gameMode = 1;
-document.querySelectorAll("input[name='gameMode']").forEach(input => {
-  input.addEventListener("change", (event) => {
-      gameMode = event.target.value;  // 更新模式
-      console.log("gameMode:", gameMode + "P")
+  // 监听模式切换
+  let gameMode = 1;
+  document.querySelectorAll("input[name='gameMode']").forEach((input) => {
+    input.addEventListener("change", (event) => {
+      gameMode = event.target.value; // 更新模式
+      console.log("gameMode:", gameMode + "P");
       // console.log("模式切换为:", gameMode == 1 ? "单人模式" : "双人模式");
       socket.emit("info", { number: 0, gameMode: gameMode });
+    });
   });
-});
 
-canvas.addEventListener("click", async (event) => {
-  // 获取鼠标点击的屏幕坐标 (像素)
-  const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left; // 归一化到 canvas 内部
-  const y = event.clientY - rect.top;
+  canvas.addEventListener("click", async (event) => {
+    // 获取鼠标点击的屏幕坐标 (像素)
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left; // 归一化到 canvas 内部
+    const y = event.clientY - rect.top;
 
-  // **定义格子大小**
-  const gridSize = 400; // 画布大小
-  const offset = 15; // **边缘留白**
-  const gap = 10; // **每个格子之间的间距**
-  const cellSize = (gridSize - 2 * offset - gap * 2) / 3; // 计算单个格子的大小
+    // **定义格子大小**
+    const gridSize = 400; // 画布大小
+    const offset = 15; // **边缘留白**
+    const gap = 10; // **每个格子之间的间距**
+    const cellSize = (gridSize - 2 * offset - gap * 2) / 3; // 计算单个格子的大小
 
-  // **计算点击的行列索引**
-  const col = Math.floor((x - offset) / (cellSize + gap));
-  const row = Math.floor((y - offset) / (cellSize + gap));
+    // **计算点击的行列索引**
+    const col = Math.floor((x - offset) / (cellSize + gap));
+    const row = Math.floor((y - offset) / (cellSize + gap));
 
-  // **检查是否点击在有效区域内**
-  if (
-    x < offset ||
-    x > gridSize - offset ||
-    y < offset ||
-    y > gridSize - offset
-  ) {
-    console.log("❌ 点击在边缘之外");
-    return;
-  }
+    // **检查是否点击在有效区域内**
+    if (
+      x < offset ||
+      x > gridSize - offset ||
+      y < offset ||
+      y > gridSize - offset
+    ) {
+      console.log("❌ 点击在边缘之外");
+      return;
+    }
 
-  // **检查是否点击在间距区域**
-  if (
-    (x - offset) % (cellSize + gap) > cellSize ||
-    (y - offset) % (cellSize + gap) > cellSize
-  ) {
-    console.log("❌ 点击在间距上");
-    return;
-  }
+    // **检查是否点击在间距区域**
+    if (
+      (x - offset) % (cellSize + gap) > cellSize ||
+      (y - offset) % (cellSize + gap) > cellSize
+    ) {
+      console.log("❌ 点击在间距上");
+      return;
+    }
 
-  if (row >= 0 && row < 3 && col >= 0 && col < 3) {
-    const index = row * 3 + col + 1; // 计算格子编号
-    console.log(`✅ 点击格子编号: ${index}`);
+    if (row >= 0 && row < 3 && col >= 0 && col < 3) {
+      const index = row * 3 + col + 1; // 计算格子编号
+      console.log(`✅ 点击格子编号: ${index}`);
 
-    // socket.send(JSON.stringify({ number: index }));
-    socket.emit("info", { number: index })
-    // // **🚀 发送编号到 Python**
-    // try {
-    //   const response = await fetch("http://localhost:5000/info", {
-    //     method: "POST",
-    //     mode: "cors", // 允许跨域请求
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ number: index }),
-    //   });
+      // socket.send(JSON.stringify({ number: index }));
+      socket.emit("info", { number: index });
+      // // **🚀 发送编号到 Python**
+      // try {
+      //   const response = await fetch("http://localhost:5000/info", {
+      //     method: "POST",
+      //     mode: "cors", // 允许跨域请求
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify({ number: index }),
+      //   });
 
-    //   const data = await response.json();
-    //   console.log("🎯 服务器响应:", data);
-    //   if (data.number != 0) {
-    //     const button = document.getElementById("toggle" + data.number);
-    //     if (button) {
-    //       let piece = "";
-    //       if (data.parity == 1) {
-    //         piece = "O";
-    //         button.click();
-    //         console.log(piece);
-    //       } else if (data.parity == 0) {
-    //         piece = "X";
-    //         button.click();
-    //         button.click();
-    //         console.log(piece);
-    //       }
-    //       if ("win" in data) {
-    //         if (data.win == true) {
-    //           requestAnimationFrame(() => {
-    //             requestAnimationFrame(() => {
-    //               alert(piece + " win!");
-    //             });
-    //           });
-    //         } else if (data.win == false) {
-    //           requestAnimationFrame(() => {
-    //             requestAnimationFrame(() => {
-    //               alert("Tie!");
-    //             });
-    //           });
-    //         }
-    //       }
-    //       console.log(`✅ 触发按钮: ${data.number}`);
-    //     }
-    //   } else if (data.number == 0) {
-    //     console.log(`重置游戏`);
-    //     updateInstanceBuffer(null);
-    //   }
-    // } catch (error) {
-    //   console.error("❌ 发送编号失败:", error);
-    // }
-  }
-  console.log(`🖱️ 点击屏幕坐标: (${x}, ${y})`);
-});
+      //   const data = await response.json();
+      //   console.log("🎯 服务器响应:", data);
+      //   if (data.number != 0) {
+      //     const button = document.getElementById("toggle" + data.number);
+      //     if (button) {
+      //       let piece = "";
+      //       if (data.parity == 1) {
+      //         piece = "O";
+      //         button.click();
+      //         console.log(piece);
+      //       } else if (data.parity == 0) {
+      //         piece = "X";
+      //         button.click();
+      //         button.click();
+      //         console.log(piece);
+      //       }
+      //       if ("win" in data) {
+      //         if (data.win == true) {
+      //           requestAnimationFrame(() => {
+      //             requestAnimationFrame(() => {
+      //               alert(piece + " win!");
+      //             });
+      //           });
+      //         } else if (data.win == false) {
+      //           requestAnimationFrame(() => {
+      //             requestAnimationFrame(() => {
+      //               alert("Tie!");
+      //             });
+      //           });
+      //         }
+      //       }
+      //       console.log(`✅ 触发按钮: ${data.number}`);
+      //     }
+      //   } else if (data.number == 0) {
+      //     console.log(`重置游戏`);
+      //     updateInstanceBuffer(null);
+      //   }
+      // } catch (error) {
+      //   console.error("❌ 发送编号失败:", error);
+      // }
+    }
+    console.log(`🖱️ 点击屏幕坐标: (${x}, ${y})`);
+  });
 
-// 刷新重置游戏
-// window.addEventListener("beforeunload", async () => {
-//   // await fetch("http://localhost:5000/info", {
-//   //   method: "POST",
-//   //   mode: "cors",
-//   //   headers: { "Content-Type": "application/json" },
-//   //   body: JSON.stringify({ number: 0 }),
-//   //   keepalive: true, // **确保请求在页面关闭时仍然被发送**
-//   // });
-//   // socket.send(JSON.stringify({ number: 0 }));
-//   socket.emit("info", { number: 0 })
-// });
+  canvas.addEventListener("mousemove", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    normalizedX = (2 * x) / rect.width - 1;
+    normalizedY = 1 - (2 * y) / rect.height;
+
+    requestAnimationFrame(() => {
+      updateUniforms(normalizedX, normalizedY);
+      render();
+    });
+
+    // console.log(`鼠标坐标：（${x}, ${y}）`);
+    // console.log(`鼠标在 Canvas 内的归一化坐标: (${normalizedX.toFixed(2)}, ${normalizedY.toFixed(2)})`);
+  });
+
+  // 刷新重置游戏
+  // window.addEventListener("beforeunload", async () => {
+  //   // await fetch("http://localhost:5000/info", {
+  //   //   method: "POST",
+  //   //   mode: "cors",
+  //   //   headers: { "Content-Type": "application/json" },
+  //   //   body: JSON.stringify({ number: 0 }),
+  //   //   keepalive: true, // **确保请求在页面关闭时仍然被发送**
+  //   // });
+  //   // socket.send(JSON.stringify({ number: 0 }));
+  //   socket.emit("info", { number: 0 })
+  // });
+};
+run();

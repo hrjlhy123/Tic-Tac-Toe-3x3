@@ -89,6 +89,19 @@ def check_win(numbers):
     print("if_win:", if_win)
     return if_win
 
+def reset(reset_gameMode):
+    global gameMode
+    global picked_numbers
+
+    gameMode = reset_gameMode
+    picked_numbers = []
+
+    log(picked_numbers)
+    print("🚨 Recet")
+    result = {
+        "number": 0,
+    }
+    emit("update", result, broadcast=True)
 
 def log(numbers):
     with open("tictactoe.txt", "w") as file:
@@ -193,14 +206,15 @@ def ai_best_move():
 
 
 @socketio.on("info")
-def info(data):
+def handle_info(data):
     global gameMode
     global picked_numbers
 
     # data = request.get_json()
 
-    if len(picked_numbers) == 0 and "gameMode" in data:
+    if "gameMode" in data:
         gameMode = int(data["gameMode"])
+        reset(gameMode)
 
     print("len(picked_numbers) == 0:", len(picked_numbers) == 0)
     print('"gameMode" in data:', "gameMode" in data)
@@ -244,22 +258,14 @@ def info(data):
                             emit("update", {"number": ai_move, "parity": parity(picked_numbers)}, broadcast=True)
 
             log(picked_numbers)
-    # elif number == 0:
-    #     picked_numbers = []
-    #     print("picked_numbers:", picked_numbers)
-    #     result = {"number": number, "parity": parity(picked_numbers)}
-    #     print(f"重置游戏")
-    #     emit("update", result, broadcast=True)
+    elif number == 0:
+        reset(gameMode)
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    global gameMode
-    global picked_numbers
-    gameMode = 1
-    picked_numbers = []
-    log(picked_numbers)
-    print("🚨 客户端断开连接，自动重置游戏")
+    reset(1)
+
 
 
 # if __name__ == "__main__":
