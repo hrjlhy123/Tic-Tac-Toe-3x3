@@ -410,7 +410,8 @@ fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
 `;
 
 // 定义图形计算
-async function runExample() {
+const canvas = document.getElementById("canvas_example");
+const run = async () => {
   if (!navigator.gpu) {
     throw new Error("WebGPU not supported");
   }
@@ -422,7 +423,7 @@ async function runExample() {
   if (!device) {
     throw new Error("Failed to create a GPUDevice");
   }
-  const canvas = document.getElementById("canvas_example");
+  // const canvas = document.getElementById("canvas_example");
   if (!canvas) {
     throw new Error("Could not access canvas in page");
   }
@@ -534,13 +535,18 @@ async function runExample() {
     if (index >= 1 && index <= 9) {
       // 三种状态: O/X/隐藏
       if (hiddenIndices.Torus[index - 1] && hiddenIndices.X[index - 1]) {
-        hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1]; 
+        hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1];
       } else if (!hiddenIndices.X[index - 1]) {
-        hiddenIndices.X[index - 1] = !hiddenIndices.X[index - 1]; 
+        hiddenIndices.X[index - 1] = !hiddenIndices.X[index - 1];
       } else {
-        hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1]; 
-        hiddenIndices.X[index - 1] = !hiddenIndices.X[index - 1]; 
+        hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1];
+        hiddenIndices.X[index - 1] = !hiddenIndices.X[index - 1];
       }
+    } else {
+      hiddenIndices = {
+        Torus: new Array(9).fill(true), // Torus 组（9 个实例）
+        X: new Array(9).fill(true), // X 组（9 个实例）
+      };
     }
 
     // console.log(`Toggled Index: ${index}`, hiddenIndices);
@@ -1046,5 +1052,128 @@ async function runExample() {
   });
 
   animationLoop();
-}
-runExample();
+};
+run();
+
+// const checkTrigger = async () => {
+//   while (true) {
+//     try {
+//       const response = await fetch(
+//         "http://localhost:5000/trigger?" + Math.random()
+//       );
+//       // const text = await response.text();
+//       const data = await response.json();
+//       console.log("🎯 服务器返回:", data);
+//       // if (text === "toggle3") {
+//       //   document.getElementById("toggle3").click();
+//       // }
+
+//       if (data.number) {
+//         const button = document.getElementById(data.number);
+//         if (button) {
+//           if (data.parity == 1) {
+//             console.log("O");
+//             button.click();
+//           } else {
+//             console.log("X");
+//             button.click();
+//             button.click();
+//           }
+
+//           console.log(`✅ 触发按钮: ${data.number}`);
+//         }
+//       }
+//     } catch (error) {
+//       console.error("❌ 获取 trigger 失败", error);
+//     }
+//     await new Promise((resolve) => setTimeout(resolve, 100)); // 每 2 秒检查一次
+//   }
+// };
+// checkTrigger();
+
+canvas.addEventListener("click", async (event) => {
+  // 获取鼠标点击的屏幕坐标 (像素)
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left; // 归一化到 canvas 内部
+  const y = event.clientY - rect.top;
+
+  // **定义格子大小**
+  const gridSize = 400; // 画布大小
+  const offset = 15; // **边缘留白**
+  const gap = 10; // **每个格子之间的间距**
+  const cellSize = (gridSize - 2 * offset - gap * 2) / 3; // 计算单个格子的大小
+
+  // **计算点击的行列索引**
+  const col = Math.floor((x - offset) / (cellSize + gap));
+  const row = Math.floor((y - offset) / (cellSize + gap));
+
+  // **检查是否点击在有效区域内**
+  if (
+    x < offset ||
+    x > gridSize - offset ||
+    y < offset ||
+    y > gridSize - offset
+  ) {
+    console.log("❌ 点击在边缘之外");
+    return;
+  }
+
+  // **检查是否点击在间距区域**
+  if (
+    (x - offset) % (cellSize + gap) > cellSize ||
+    (y - offset) % (cellSize + gap) > cellSize
+  ) {
+    console.log("❌ 点击在间距上");
+    return;
+  }
+
+  if (row >= 0 && row < 3 && col >= 0 && col < 3) {
+    const index = row * 3 + col + 1; // 计算格子编号
+    console.log(`✅ 点击格子编号: ${index}`);
+
+    // **🚀 发送编号到 Python**
+    try {
+      const response = await fetch("http://localhost:5000/info", {
+        method: "POST",
+        mode: "cors", // 允许跨域请求
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ number: index }),
+      });
+
+      const data = await response.json();
+      console.log("🎯 服务器响应:", data);
+      if (data.number != 0) {
+        const button = document.getElementById("toggle" + data.number);
+        if (button) {
+          if (data.parity == 1) {
+            console.log("O");
+            button.click();
+          } else {
+            console.log("X");
+            button.click();
+            button.click();
+          }
+
+          console.log(`✅ 触发按钮: ${data.number}`);
+        }
+      } else if (data.number == 0) {
+        console.log(`重置游戏`);
+        updateInstanceBuffer(null);
+      }
+    } catch (error) {
+      console.error("❌ 发送编号失败:", error);
+    }
+  }
+  console.log(`🖱️ 点击屏幕坐标: (${x}, ${y})`);
+});
+
+// 刷新重置游戏
+window.addEventListener("beforeunload", async () => {
+  await fetch("http://localhost:5000/info", {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ number: 0 }),
+    keepalive: true, // **确保请求在页面关闭时仍然被发送**
+  });
+});

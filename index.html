@@ -8,6 +8,7 @@
     <!-- Create the canvas -->
     <canvas id="canvas_example" width="400" height="400"></canvas>
     <br />
+    <button id="toggle0">重置游戏 0</button>
     <button id="toggle1">切换O/X 1</button>
     <button id="toggle2">切换O/X 2</button>
     <button id="toggle3">切换O/X 3</button>
@@ -20,42 +21,5 @@
 
     <!-- Execute the script code -->
     <script src="index.js"></script>
-    <script>
-      async function checkTrigger() {
-        while (true) {
-          try {
-            const response = await fetch(
-              "http://localhost:5000/trigger?" + Math.random()
-            );
-            // const text = await response.text();
-            const data = await response.json();
-            console.log("🎯 服务器返回:", data);
-            // if (text === "toggle3") {
-            //   document.getElementById("toggle3").click();
-            // }
-
-            if (data.number) {
-              const button = document.getElementById(data.number);
-              if (button) {
-                if(data.parity == 1) {
-                  console.log("O")
-                  button.click()
-                } else {
-                  console.log("X")
-                  button.click()
-                  button.click()
-                }
-
-                console.log(`✅ 触发按钮: ${data.number}`);
-              }
-            }
-          } catch (error) {
-            console.error("❌ 获取 trigger 失败", error);
-          }
-          await new Promise((resolve) => setTimeout(resolve, 100)); // 每 2 秒检查一次
-        }
-      }
-      checkTrigger();
-    </script>
   </body>
 </html>
