@@ -4,275 +4,242 @@ from flask_socketio import SocketIO, emit
 from easyAI.AI import Negamax
 from easyAI.TwoPlayerGame import TwoPlayerGame
 from easyAI.Player import AI_Player
-import eventlet
-import time
-import threading
-import random
 
+import webbrowser
+import os
+
+## Creating a Flask Application Instance
 app = Flask(__name__)
+## Enabled cross-domain resource sharing for Flask applications (Troubleshooting CORS for local debugging)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+## Integration of SocketIO for real-time communication
+socketIO = SocketIO(app, cors_allowed_origins="*")
 
-# class RandomNumberPicker:
-#     def __init__(self):
-#         self.numbers = list(range(1, 10))
-#         self.picked_numbers = []
+class game:
+    def __init__(self, gameMode = 1):
+        """
+        gameMode: 
+            1: single player mode (1P)
+            2: two pleayer mode (2P)
+        moves: Save all moves, moves 1~9 indicate board position
+        """
+        self.gameMode = gameMode
+        self.moves = []
 
-#     def draw(self):
-#         if not self.numbers:
-#             return None
-#         number = self.numbers.pop(random.randint(0, len(self.numbers) - 1))
-#         self.picked_numbers.append(number)
-#         return number
-
-#     def parity(self): # odd or even
-#         return 1 if len(self.picked_numbers) % 2 == 1 else 2
-
-# picker = RandomNumberPicker()
-# trigger_state = ""  # 触发状态
-
-# @app.route("/trigger", methods=["GET", "POST"])
-# def trigger():
-#     global trigger_state
-#     if request.method == "POST":
-#         trigger_state = request.data.decode("utf-8")
-#         return "✅ Trigger Updated"
-
-#     # 获取后清除触发状态，避免重复触发
-#     temp = trigger_state
-#     trigger_state = ""  # **重要：清空状态**
-
-#     return jsonify({
-#         "number": temp,
-#         "parity": picker.parity()
-#     })
-
-# def auto_trigger():
-#     """ 每 5 秒触发一次 toggle3 """
-#     global trigger_state
-#     while True:
-#         time.sleep(5)
-#         number = picker.draw()
-#         if number:
-#             trigger_state = "toggle" + str(number)
-#             print("🔵 自动触发: toggle" + str(number))
-#         else:
-#             print("没有数字")
-#             break
-
-# # 在后台运行自动触发线程
-# threading.Thread(target=auto_trigger, daemon=True).start()
-
-
-def parity(numbers):  # odd or even
-    return 1 if len(numbers) % 2 == 1 else 0
-
-
-def check_win(numbers):
-    print("numbers:", numbers)
-    if_win = False
-    numbers_win = [
-        [1, 2, 3],
-        [4, 5, 6],
-        [7, 8, 9],
-        [1, 4, 7],
-        [2, 5, 8],
-        [3, 6, 9],
-        [1, 5, 9],
-        [3, 5, 7],
-    ]
-
-    for number_win in numbers_win:
-        if set(number_win).issubset(set(numbers)):
-            if_win = True
-            break
-    print("if_win:", if_win)
-    return if_win
-
-def reset(reset_gameMode):
-    global gameMode
-    global picked_numbers
-
-    gameMode = reset_gameMode
-    picked_numbers = []
-
-    log(picked_numbers)
-    print("🚨 Recet")
-    result = {
-        "number": 0,
-    }
-    emit("update", result, broadcast=True)
-
-def log(numbers):
-    with open("tictactoe.txt", "w") as file:
-        for index, num in enumerate(numbers):
-            if index % 2 == 0:
-                file.write(f"O: {num}\n")
-            else:
-                file.write(f"X: {num}\n")
-
-gameMode = 1
-picked_numbers = []
-
-def ai_best_move():
-    """计算 AI 最佳走法"""
-    available_moves = [i for i in range(1, 10) if i not in picked_numbers]
-    if not available_moves:
-        return None  # 没有可选的走法
-
-    # AI 使用 Negamax 计算最佳走法
-    class TicTacToeAI(TwoPlayerGame):
-        def __init__(self, players):
-            self.players = players
-            self.moves = picked_numbers[:]  # 复制当前局势
-            self.current_player = 2  # AI 是 X（第二个玩家）
-            self.ai_move = None  # 用于存储 Negamax 计算的最佳落子
-
-        def possible_moves(self):
-            return [str(i) for i in range(1, 10) if i not in self.moves]  # 直接计算可选步
-
-        def make_move(self, move):
-            self.moves.append(int(move))
-
-        def unmake_move(self, move):
-            self.moves.remove(int(move))
-
-        def is_over(self):
-            # return check_win(self.moves) or len(self.moves) == 9
-            return self.winner() is not None or len(self.moves) == 9
-
-        def winner(self):
-            o_moves = {self.moves[i] for i in range(0, len(self.moves), 2)}  # O 的落子
-            x_moves = {self.moves[i] for i in range(1, len(self.moves), 2)}  # X 的落子
-            for win in [
-                {1, 2, 3},
-                {4, 5, 6},
-                {7, 8, 9},
-                {1, 4, 7},
-                {2, 5, 8},
-                {3, 6, 9},
-                {1, 5, 9},
-                {3, 5, 7},
-            ]:
-                if win.issubset(o_moves):
-                    return 1  # O 赢
-                if win.issubset(x_moves):
-                    return 2  # X 赢
-            return None
-
-        def scoring(self):
-            return 100 if self.winner() == 2 else -100 if self.winner() == 1 else 0
-
-    ai_algo = Negamax(3)  # AI 计算深度
-    game = TicTacToeAI([AI_Player(ai_algo), AI_Player(ai_algo)])
-
-    best_move = game.player.ask_move(game)
-    return int(best_move) if best_move else None
-
-
-# @app.route("/info", methods=["POST"])
-# def receive():
-#     global picked_numbers
-
-#     data = request.get_json()
-
-#     number = data.get("number")
-
-#     if number != 0:
-#         if number not in picked_numbers:
-#             picked_numbers.append(number)
-#             if len(picked_numbers) >= 5:
-#                 numbers = []
-#                 for index, num in enumerate(picked_numbers):
-#                     if index % 2 != len(picked_numbers) % 2:
-#                         numbers.append(num)
-#                 if_win = check_win(numbers)
-#                 if if_win or len(picked_numbers) == 9:
-#                     result = {"number": number, "parity": parity(picked_numbers), "win": if_win}
-#                     return jsonify(result)
-
-
-#             print("picked_numbers:", picked_numbers)
-#             result = {"number": number, "parity": parity(picked_numbers)}
-#             # print(f"✅ 接收到前端点击的编号: {number}")
-#             return jsonify(result)
-#     elif number == 0:
-#         picked_numbers = []
-#         print("picked_numbers:", picked_numbers)
-#         result = {"number": number, "parity": parity(picked_numbers)}
-#         print(f"重置游戏")
-#         return jsonify(result)
-#     return jsonify({"status": "error", "message": "Invalid data"}), 400
-
-
-@socketio.on("info")
-def handle_info(data):
-    global gameMode
-    global picked_numbers
-
-    # data = request.get_json()
-
-    if "gameMode" in data:
-        gameMode = int(data["gameMode"])
-        reset(gameMode)
-
-    print("len(picked_numbers) == 0:", len(picked_numbers) == 0)
-    print('"gameMode" in data:', "gameMode" in data)
-    print("gameMode:", gameMode)
-    number = data.get("number")
-
-    if number != 0:
-        if number not in picked_numbers:
-            picked_numbers.append(number)
-            print("picked_numbers:", picked_numbers)
-            if len(picked_numbers) >= 5:
-                numbers = []
-                for index, num in enumerate(picked_numbers):
-                    if index % 2 != len(picked_numbers) % 2:
-                        numbers.append(num)
-                if_win = check_win(numbers)
-                if if_win or len(picked_numbers) == 9:
-                    result = {
-                        "number": number,
-                        "parity": parity(picked_numbers),
-                        "win": if_win,
-                    }
-                    emit("update", result, broadcast=True)
+    def parity(self):
+        """
+        Determine the parity of the current number of drops:
+            0: even
+            1: odd
+        """
+        if len(self.moves) % 2 == 0:
+            return 0
+        else:
+            return 1
+        
+    def check_win(self, moves):
+        """
+        Detects whether the given drop list numbers constitute a winning game.
+        """
+        winning_patterns = [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+            [1, 4, 7],
+            [2, 5, 8],
+            [3, 6, 9],
+            [1, 5, 9],
+            [3, 5, 7],
+        ]
+        for pattern in winning_patterns:
+            if set(pattern).issubset(set(moves)):
+                ## win
+                return True
+        ## lose
+        return False
+    
+    def reset(self, gameMode_reset):
+        """
+        Reset the game state, clear the drop record, write to the log.
+        """
+        self.gameMode = gameMode_reset
+        self.moves = []
+        self.log_moves()
+        print("🚨 Game reset")
+        result = {"number": 0}
+        emit("update", result, broadcast=True)
+        return result
+    
+    def log_moves(self):
+        """
+        Write the current drop record to tictactoe.txt.
+        """
+        with open('tictactoe.txt', 'w') as file:
+            for index, move in enumerate(self.moves):
+                if index % 2 == 0:
+                    file.write(f"O: {move}\n")
                 else:
-                    result = {"number": number, "parity": parity(picked_numbers)}
-                    emit("update", result, broadcast=True)
-            else:
-                result = {"number": number, "parity": parity(picked_numbers)}
-                emit("update", result, broadcast=True)
+                    file.write(f"X: {move}\n")
 
-            # 轮到 AI
-            if gameMode == 1:
-                if parity(picked_numbers) == 1:  # AI (X) 走
-                    ai_move = ai_best_move()
-                    if ai_move:
-                        picked_numbers.append(ai_move)
-                        print("AI 选择:", ai_move)
-                        if check_win([picked_numbers[i] for i in range(len(picked_numbers)) if i % 2 == 1]):
-                            emit("update", {"number": ai_move, "parity": parity(picked_numbers), "win": True}, broadcast=True)
-                        else:
-                            emit("update", {"number": ai_move, "parity": parity(picked_numbers)}, broadcast=True)
+    def move_AI(self):
+        """
+        Calculate the the AI's move using EasyAI's Negamax algorithm (Negamax(node,depth)=max(−Negamax(child,depth−1))). 
+        """
+        available_moves = []
+        for i in range(1, 10):
+            if i not in self.moves:
+                available_moves.append(i)
 
-            log(picked_numbers)
-    elif number == 0:
-        reset(gameMode)
+        if not available_moves:
+            return None
+        
+        class AI(TwoPlayerGame):
+            def __init__(self, moves):
+                self.moves = moves.copy()
+                self.current_player = 2 # AI as Player2 (X)
 
+            def possible_moves(self):
+                available_moves = []
+                for i in range(1, 10):
+                    if i not in self.moves:
+                        available_moves.append(str(i))
+                return available_moves
+            
+            def make_move(self, move):
+                self.moves.append(int(move))
 
-@socketio.on("disconnect")
+            def unmake_move(self, move):
+                self.moves.remove(int(move))
+
+            def winner(self):
+                moves_O = set()
+                moves_X = set()
+
+                for i in range(len(self.moves)):
+                    if i % 2 == 0:
+                        moves_O.add(self.moves[i])
+                    else:
+                        moves_X.add(self.moves[i])
+                for wins in [
+                    {1, 2, 3},
+                    {4, 5, 6},
+                    {7, 8, 9},
+                    {1, 4, 7},
+                    {2, 5, 8},
+                    {3, 6, 9},
+                    {1, 5, 9},
+                    {3, 5, 7},
+                ]:
+                    if wins.issubset(moves_O):
+                        return 1  # O 赢
+                    if wins.issubset(moves_X):
+                        return 2  # X 赢
+                return None
+
+            def scoring(self):
+                winner = self.winner()
+                if winner == 2:
+                    return 100
+                elif winner == 1:
+                    return -100
+                else:
+                    return 0
+
+            def is_over(self):
+                if self.winner() is not None or len(self.moves) == 9:
+                    return True
+        
+        algorithm = Negamax(3) # Calculated depth: 3
+        ai = AI(self.moves)
+        move = AI_Player(algorithm).ask_move(ai)
+        if move:
+            return int(move)
+        else:
+            return None
+        
+    def info(self, data):
+        """
+        Process game logic based on "data" from the fromtend.
+        
+        Steps:
+        1. **Game Mode**:
+            - Reset the game and update the mode if "gameMode" is in data
+        
+        2. **Move**:
+            If "move" is valid:
+                - Add "move" to "moves" if it's not already taken
+                If at least 5 moves have been made:
+                    - Check for a win or draw
+
+        3. **AI Move (1P)**:
+            If it's AI's turn:
+                - AI makes a move
+                - Check for a win or draw (Can be optimized)
+        """
+        result = []
+
+        ## Update gameMode and reset the game
+        if "gameMode" in data:
+            self.gameMode = int(data["gameMode"])
+            result.append(self.reset(self.gameMode))
+
+        move = data.get("number")
+        if move is None:
+            return result
+        
+        ## Player's move:
+        if move != 0 and move not in self.moves:
+            self.moves.append(move)
+            print("Moves:", self.moves)
+
+            subresult = {"number": move, "parity": self.parity()}
+
+            ## Check win or draw condition
+            if len(self.moves) >= 5:
+                moves_player = []
+                for i in range(len(self.moves)):
+                    if i % 2 != self.parity():
+                        moves_player.append(self.moves[i])
+                if self.check_win(moves_player) or len(self.moves) == 9:
+                    subresult["win"] = self.check_win(moves_player)
+
+            self.log_moves()
+            result.append(subresult)
+
+            ## AI's move
+            if self.gameMode == 1 and self.parity() == 1:
+                move_ai = self.move_AI()
+                if move_ai:
+                    self.moves.append(move_ai)
+                    print("AI's Move:", move_ai)
+                    moves_ai = []
+                    for i in range(len(self.moves)):
+                        if i % 2 == 1:
+                            moves_ai.append(self.moves[i])
+                    subresult = {"number": move_ai, "parity": self.parity()}
+                    if self.check_win(moves_ai):
+                        subresult["win"] = True
+                    result.append(subresult)
+        
+        elif move == 0:
+            self.reset(self.gameMode)
+
+        return result
+    
+## Creating a game instance
+instance = game(gameMode=1)
+
+@socketIO.on("info")
+def handle_info(data):
+    results = instance.info(data)
+    for result in results:
+        emit("update", result, broadcast=True)
+
+@socketIO.on("disconnect")
 def handle_disconnect():
-    reset(1)
-
-
-
-# if __name__ == "__main__":
-#     app.run(host="localhost", port=5000)
-
-# if __name__ == "__main__":
-#     socketio.run(app, host="localhost", port=5000, debug=True)
+    instance.reset(1)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    filePath = os.path.abspath('index.html')
+    webbrowser.open("file://" + filePath)
+    socketIO.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
