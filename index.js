@@ -525,21 +525,6 @@ async function runExample() {
     ],
   ];
 
-  let toggleState = false;
-
-  const indexSets = [
-    {
-      Cylinder: [0, 1, 3], // Cylinder: 保留 0, 1, 3（去掉 2）
-      Torus: [0, 2, 4, 6, 8], // Torus: 只保留索引 0, 2, 4, 6, 8
-      X: [1, 3, 5, 7], // X: 只保留索引 1, 3, 5, 7
-    },
-    {
-      Cylinder: [0, 1, 3], // Cylinder: 保留 0, 1, 3（去掉 2）
-      Torus: [1, 3, 5, 7], // Torus: 只保留索引 1, 3, 5, 7
-      X: [0, 2, 4, 6, 8], // X: 只保留索引 0, 2, 4, 6, 8
-    },
-  ];
-
   let hiddenIndices = {
     Torus: new Array(9).fill(false), // Torus 组（9 个实例）
     X: new Array(9).fill(false), // X 组（9 个实例）
@@ -547,13 +532,19 @@ async function runExample() {
 
   const toggleInstances = (index) => {
     if (index >= 1 && index <= 9) {
-      hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1]; // 切换状态
-    } else if (index >= 10 && index <= 18) {
-      hiddenIndices.X[index - 10] = !hiddenIndices.X[index - 10]; // 切换状态
+      // 三种状态: O/X/隐藏
+      if (hiddenIndices.Torus[index - 1] && hiddenIndices.X[index - 1]) {
+        hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1]; 
+      } else if (!hiddenIndices.X[index - 1]) {
+        hiddenIndices.X[index - 1] = !hiddenIndices.X[index - 1]; 
+      } else {
+        hiddenIndices.Torus[index - 1] = !hiddenIndices.Torus[index - 1]; 
+        hiddenIndices.X[index - 1] = !hiddenIndices.X[index - 1]; 
+      }
     }
 
-    console.log(`Toggled Index: ${index}`, hiddenIndices);
-    console.log(`instanceTransforms:`, instanceTransforms);
+    // console.log(`Toggled Index: ${index}`, hiddenIndices);
+    // console.log(`instanceTransforms:`, instanceTransforms);
 
     // **确保每次按 16 个 float 进行分割**
     const splitInstances = (instances, hiddenArray) => {
@@ -574,30 +565,28 @@ async function runExample() {
     const filteredTransforms = [
       instanceTransforms[0], // Cylinder 始终不变
       splitInstances(instanceTransforms[1], hiddenIndices.Torus), // 按 16 float 过滤 Torus
-      splitInstances(instanceTransforms[2], hiddenIndices.X) // 按 16 float 过滤 X
-  ];
+      splitInstances(instanceTransforms[2], hiddenIndices.X), // 按 16 float 过滤 X
+    ];
 
-    console.log(`filteredTransforms:`, filteredTransforms);
+    // console.log(`filteredTransforms:`, filteredTransforms);
     return filteredTransforms;
   };
 
   function updateInstanceBuffer(index) {
-    const newInstanceTransforms = toggleInstances(index);
-    console.log("newInstanceTransforms:", newInstanceTransforms);
+    const instanceTransforms_selected = toggleInstances(index);
+    // console.log("newInstanceTransforms:", instanceTransforms_selected);
 
     const flattenInstanceTransforms = new Float32Array(
-      newInstanceTransforms.flat(Infinity)
+      instanceTransforms_selected.flat(Infinity)
     );
 
     device.queue.writeBuffer(instanceBuffer, 0, flattenInstanceTransforms);
 
-    instanceCountCylinder = Math.floor(newInstanceTransforms[0].length / 16);
-    instanceCountTorus = Math.floor(newInstanceTransforms[1].length / 16);
-    instanceCountX = Math.floor(newInstanceTransforms[2].length / 16);
+    instanceCountCylinder = instanceTransforms_selected[0].length / 16;
+    instanceCountTorus = instanceTransforms_selected[1].length / 16;
+    instanceCountX = instanceTransforms_selected[2].length / 16;
 
-    console.log(
-      `Updated Instance Count - Cylinder: ${instanceCountCylinder}, Torus: ${instanceCountTorus}, X: ${instanceCountX}`
-    );
+    // console.log(`Updated Instance Count - Cylinder: ${instanceCountCylinder}, Torus: ${instanceCountTorus}, X: ${instanceCountX}`);
 
     render(); // 重新渲染
   }
@@ -606,7 +595,7 @@ async function runExample() {
     button.addEventListener(`click`, (event) => {
       const id = event.target.id;
       const index = parseInt(id.replace(`toggle`, ``), 10);
-      console.log(`index:`, index);
+      // console.log(`index:`, index);
       updateInstanceBuffer(index);
     });
   });
@@ -621,6 +610,7 @@ async function runExample() {
   // ])
 
   // const instanceCount = instanceTransforms.length / 16;
+
   // 计算实例数量
   let instanceCountCylinder = instanceTransforms[0].length / 16;
   let instanceCountTorus = instanceTransforms[1].length / 16;
@@ -632,10 +622,7 @@ async function runExample() {
   const flattenInstanceTransforms = new Float32Array(
     instanceTransforms.flat(Infinity) // 展平二维数组为一维数组
   );
-  console.log(
-    `flattenInstanceTransforms.length:`,
-    flattenInstanceTransforms.length
-  );
+  // console.log(`flattenInstanceTransforms.length:`,flattenInstanceTransforms.length);
 
   // 创建实例缓冲区
   const instanceBuffer = device.createBuffer({
@@ -1046,6 +1033,17 @@ async function runExample() {
   // updateAlpha();
 
   render();
+
+  // 🚀 **在下一帧隐藏 Torus 和 X**
+  requestAnimationFrame(() => {
+    console.log("🔄 Hiding Torus and X...");
+
+    // 初始化 hiddenIndices
+    hiddenIndices.Torus = new Array(instanceCountTorus).fill(true);
+    hiddenIndices.X = new Array(instanceCountX).fill(true);
+
+    updateInstanceBuffer(null); // 立即隐藏并更新 GPU
+  });
 
   animationLoop();
 }

@@ -1,33 +1,61 @@
 <html>
-<body>
+  <head>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Tic-Tac-Toe (3x3)</h1>
 
-<h1>Tic-Tac-Toe (3x3)</h1>
+    <!-- Create the canvas -->
+    <canvas id="canvas_example" width="400" height="400"></canvas>
+    <br />
+    <button id="toggle1">切换O/X 1</button>
+    <button id="toggle2">切换O/X 2</button>
+    <button id="toggle3">切换O/X 3</button>
+    <button id="toggle4">切换O/X 4</button>
+    <button id="toggle5">切换O/X 5</button>
+    <button id="toggle6">切换O/X 6</button>
+    <button id="toggle7">切换O/X 7</button>
+    <button id="toggle8">切换O/X 8</button>
+    <button id="toggle9">切换O/X 9</button>
 
-<!-- Create the canvas -->
-<canvas id="canvas_example" width="400" height="400"></canvas>
-<br/>
-<button id="toggle1">切换O1</button>
-<button id="toggle2">切换O2</button>
-<button id="toggle3">切换O3</button>
-<button id="toggle4">切换O4</button>
-<button id="toggle5">切换O5</button>
-<button id="toggle6">切换O6</button>
-<button id="toggle7">切换O7</button>
-<button id="toggle8">切换O8</button>
-<button id="toggle9">切换O9</button>
-<br/>
-<button id="toggle10">切换X1</button>
-<button id="toggle11">切换X2</button>
-<button id="toggle12">切换X3</button>
-<button id="toggle13">切换X4</button>
-<button id="toggle14">切换X5</button>
-<button id="toggle15">切换X6</button>
-<button id="toggle16">切换X7</button>
-<button id="toggle17">切换X8</button>
-<button id="toggle18">切换X9</button>
+    <!-- Execute the script code -->
+    <script src="index.js"></script>
+    <script>
+      async function checkTrigger() {
+        while (true) {
+          try {
+            const response = await fetch(
+              "http://localhost:5000/trigger?" + Math.random()
+            );
+            // const text = await response.text();
+            const data = await response.json();
+            console.log("🎯 服务器返回:", data);
+            // if (text === "toggle3") {
+            //   document.getElementById("toggle3").click();
+            // }
 
-<!-- Execute the script code -->
-<script src="index.js"></script>
+            if (data.number) {
+              const button = document.getElementById(data.number);
+              if (button) {
+                if(data.parity == 1) {
+                  console.log("O")
+                  button.click()
+                } else {
+                  console.log("X")
+                  button.click()
+                  button.click()
+                }
 
-</body>
-</html> 
+                console.log(`✅ 触发按钮: ${data.number}`);
+              }
+            }
+          } catch (error) {
+            console.error("❌ 获取 trigger 失败", error);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100)); // 每 2 秒检查一次
+        }
+      }
+      checkTrigger();
+    </script>
+  </body>
+</html>
