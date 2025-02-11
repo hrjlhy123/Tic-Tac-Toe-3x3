@@ -18,7 +18,7 @@ const mat3Multiply = (mat, vec) => {
   return [
     mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2],
     mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2],
-    mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2]
+    mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2],
   ];
 };
 
@@ -43,15 +43,20 @@ const rotateVertices = (vertices, angle, axis) => {
 
   for (let i = 0; i < vertices.length; i += 10) {
     let v = [vertices[i], vertices[i + 1], vertices[i + 2]]; // 取出顶点坐标 (x, y, z)
-    let vNew = mat3Multiply(rotationMatrix, v)
+    let vNew = mat3Multiply(rotationMatrix, v);
 
     let n = [vertices[i + 3], vertices[i + 4], vertices[i + 5]];
-    let nNew = mat3Multiply(rotationMatrix, n)
+    let nNew = mat3Multiply(rotationMatrix, n);
 
     rotated.push(
-      vNew[0], vNew[1], vNew[2],  // 旋转后的顶点坐标
-      nNew[0], nNew[1], nNew[2],  // 旋转后的法线
-      ...vertices.slice(i + 6, i + 10)); // 复制颜色等信息
+      vNew[0],
+      vNew[1],
+      vNew[2], // 旋转后的顶点坐标
+      nNew[0],
+      nNew[1],
+      nNew[2], // 旋转后的法线
+      ...vertices.slice(i + 6, i + 10)
+    ); // 复制颜色等信息
   }
 
   return rotated;
@@ -452,7 +457,12 @@ fn vertexMain(
 fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
     // let lightDirection = normalize(vec3f(1.0, 1.0, 1.0)); // oblique overhead light source
     let lightDirection = normalize(vec3f(uniforms.position_mouse.x, uniforms.position_mouse.y, 5.0));
+    
+    // let smoothNormal = normalize(fragData.normal); // 归一化确保平滑
+    
     let diffuse = max(dot(fragData.normal, lightDirection), 0.0);
+
+    // let diffuse = max(dot(smoothNormal, lightDirection), 0.0);
     return vec4f(fragData.colors.rgb * diffuse * 1.0, fragData.colors.a);
     // return fragData.colors;
 }
@@ -461,8 +471,9 @@ fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
 // 定义图形计算
 const canvas = document.getElementById("canvas_example");
 const run = async () => {
-  let normalizedX = 1.0, normalizedY = 1.0
-  
+  let normalizedX = 1.0,
+    normalizedY = 1.0;
+
   if (!navigator.gpu) {
     throw new Error("WebGPU not supported");
   }
@@ -482,6 +493,11 @@ const run = async () => {
   if (!context) {
     throw new Error("Could not obtain WebGPU context for canvas");
   }
+
+  // const limits = device.limits;
+  // console.log("最大样本数（MSAA sample count）:", limits.maxSampledTexturesPerShaderStage);
+  // console.log("最大纹理维度:", limits.maxTextureDimension2D);
+
   // 初始化图形画布
   const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
@@ -719,10 +735,21 @@ const run = async () => {
     code: shaderCode,
   });
 
+  const sampleCount = 4; // 设置 MSAA 级别（通常为 4）
+
+  // 添加MSAA纹理
+  const msaaTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: canvasFormat,
+    sampleCount: sampleCount, // 关键：启用多重采样
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
   // 定义深度缓冲区
   const depthTexture = device.createTexture({
     size: [canvas.width, canvas.height],
     format: "depth24plus",
+    sampleCount: sampleCount,
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
@@ -837,6 +864,9 @@ const run = async () => {
       depthWriteEnabled: true,
       depthCompare: "less",
     },
+    multisample: {
+      count: 4
+    },
   });
 
   // 渲染
@@ -849,7 +879,9 @@ const run = async () => {
     const renderPass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          view: context.getCurrentTexture().createView(),
+          // view: context.getCurrentTexture().createView(),
+          view: msaaTexture.createView(), // ✅ 改为 MSAA 纹理
+          resolveTarget: context.getCurrentTexture().createView(), // ✅ 解析到最终屏幕
           loadOp: "clear",
           clearValue: { r: 0.9, g: 0.9, b: 0.9, a: 0.0 },
           storeOp: "store",
