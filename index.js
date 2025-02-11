@@ -1145,15 +1145,32 @@ canvas.addEventListener("click", async (event) => {
       if (data.number != 0) {
         const button = document.getElementById("toggle" + data.number);
         if (button) {
+          let piece = "";
           if (data.parity == 1) {
-            console.log("O");
+            piece = "O";
             button.click();
-          } else {
-            console.log("X");
+            console.log(piece);
+          } else if (data.parity == 0) {
+            piece = "X";
             button.click();
             button.click();
+            console.log(piece);
           }
-
+          if ("win" in data) {
+            if (data.win == true) {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  alert(piece + " win!");
+                });
+              });
+            } else if (data.win == false) {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  alert("Tie!");
+                });
+              });
+            }
+          }
           console.log(`✅ 触发按钮: ${data.number}`);
         }
       } else if (data.number == 0) {
