@@ -1140,6 +1140,17 @@ socket.on("update", (data) => {
   }
 });
 
+// 监听模式切换
+let gameMode = 1;
+document.querySelectorAll("input[name='gameMode']").forEach(input => {
+  input.addEventListener("change", (event) => {
+      gameMode = event.target.value;  // 更新模式
+      console.log("gameMode:", gameMode + "P")
+      // console.log("模式切换为:", gameMode == 1 ? "单人模式" : "双人模式");
+      socket.emit("info", { number: 0, gameMode: gameMode });
+  });
+});
+
 canvas.addEventListener("click", async (event) => {
   // 获取鼠标点击的屏幕坐标 (像素)
   const rect = canvas.getBoundingClientRect();
