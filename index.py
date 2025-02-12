@@ -132,9 +132,9 @@ class game:
                     {3, 5, 7},
                 ]:
                     if wins.issubset(moves_O):
-                        return 1  # O 赢
+                        return 1  # O win
                     if wins.issubset(moves_X):
-                        return 2  # X 赢
+                        return 2  # X win
                 return None
 
             def scoring(self):
