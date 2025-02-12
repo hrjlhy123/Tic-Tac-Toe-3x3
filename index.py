@@ -8,6 +8,7 @@ from easyAI.Player import AI_Player
 import webbrowser
 import os
 
+
 ## Creating a Flask Application Instance
 app = Flask(__name__)
 ## Enabled cross-domain resource sharing for Flask applications (Troubleshooting CORS for local debugging)
