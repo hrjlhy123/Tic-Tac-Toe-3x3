@@ -55,9 +55,9 @@ class game:
         for pattern in winning_patterns:
             if set(pattern).issubset(set(moves)):
                 ## win
-                return True
+                return True, pattern
         ## lose
-        return False
+        return False, None
     
     def reset(self, gameMode_reset):
         """
@@ -98,6 +98,7 @@ class game:
             def __init__(self, moves):
                 self.moves = moves.copy()
                 self.current_player = 2 # AI as Player2 (X)
+                self.ai_move = None
 
             def possible_moves(self):
                 available_moves = []
@@ -108,6 +109,7 @@ class game:
             
             def make_move(self, move):
                 self.moves.append(int(move))
+                self.ai_move = move
 
             def unmake_move(self, move):
                 self.moves.remove(int(move))
@@ -150,7 +152,7 @@ class game:
                 if self.winner() is not None or len(self.moves) == 9:
                     return True
         
-        algorithm = Negamax(3) # Calculated depth: 3
+        algorithm = Negamax(7) # Calculated depth: 5
         ai = AI(self.moves)
         move = AI_Player(algorithm).ask_move(ai)
         if move:
@@ -201,8 +203,9 @@ class game:
                 for i in range(len(self.moves)):
                     if i % 2 != self.parity():
                         moves_player.append(self.moves[i])
-                if self.check_win(moves_player) or len(self.moves) == 9:
-                    subresult["win"] = self.check_win(moves_player)
+                if self.check_win(moves_player)[0] or len(self.moves) == 9:
+                    subresult["win"], subresult["numbers_win"] = self.check_win(moves_player)
+                    subresult["AI"] = False
 
             self.log_moves()
             result.append(subresult)
@@ -218,8 +221,9 @@ class game:
                         if i % 2 == 1:
                             moves_ai.append(self.moves[i])
                     subresult = {"number": move_ai, "parity": self.parity()}
-                    if self.check_win(moves_ai):
-                        subresult["win"] = True
+                    if self.check_win(moves_ai)[0]:
+                        subresult["win"], subresult["numbers_win"] = self.check_win(moves_ai)
+                        subresult["AI"] = True
                     result.append(subresult)
         
         elif move == 0:

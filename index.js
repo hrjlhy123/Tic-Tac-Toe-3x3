@@ -469,7 +469,7 @@ fn fragmentMain(fragData: DataStruct) -> @location(0) vec4f {
 `;
 
 // 定义图形计算
-const canvas = document.getElementById("canvas_example");
+const canvas = document.getElementById("canvas");
 const run = async () => {
   let normalizedX = 1.0,
     normalizedY = 1.0;
@@ -485,7 +485,7 @@ const run = async () => {
   if (!device) {
     throw new Error("Failed to create a GPUDevice");
   }
-  // const canvas = document.getElementById("canvas_example");
+  // const canvas = document.getElementById("canvas");
   if (!canvas) {
     throw new Error("Could not access canvas in page");
   }
@@ -865,7 +865,7 @@ const run = async () => {
       depthCompare: "less",
     },
     multisample: {
-      count: 4
+      count: 4,
     },
   });
 
@@ -1201,11 +1201,27 @@ const run = async () => {
         }
         if ("win" in data) {
           if (data.win == true) {
+            let numbers_win = data.numbers_win,
+              divs = document.querySelectorAll("div#win > div");
+            numbers_win.forEach((num) => {
+              if (divs[num - 1]) {
+                divs[num - 1].style.visibility = "visible";
+              }
+            });
+            if (data.AI == true) {
+              divs.forEach((div) => {
+                div.classList.toggle("win_AI");
+              });
+            }
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
                 alert(piece + " win!");
                 socket.emit("info", { number: 0 });
                 updateInstanceBuffer(null);
+                divs.forEach((div) => {
+                  div.style.visibility = "hidden";
+                  div.classList.remove("win_AI");
+                });
               });
             });
           } else if (data.win == false) {
@@ -1214,6 +1230,10 @@ const run = async () => {
                 alert("Tie!");
                 socket.emit("info", { number: 0 });
                 updateInstanceBuffer(null);
+                divs.forEach((div) => {
+                  div.style.visibility = "hidden";
+                  div.classList.remove("win_AI");
+                });
               });
             });
           }
@@ -1222,6 +1242,11 @@ const run = async () => {
       }
     } else if (data.number == 0) {
       console.log(`重置游戏`);
+      let divs = document.querySelectorAll("div#win > div");
+      divs.forEach((div) => {
+        div.style.visibility = "hidden";
+        div.classList.remove("win_AI");
+      });
       updateInstanceBuffer(null);
     }
   });
