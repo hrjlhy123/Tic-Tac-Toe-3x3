@@ -65,7 +65,7 @@ class game:
         """
         self.gameMode = gameMode_reset
         self.moves = []
-        self.log_moves()
+        # self.log_moves()
         print("🚨 Game reset")
         result = {"number": 0}
         emit("update", result, broadcast=True)
